@@ -34,6 +34,8 @@ type AdminSummary = {
     status: string;
     isPostEnabled: boolean;
     oddsSyncedAt: string | null;
+    homeScore: number | null;
+    awayScore: number | null;
     pendingBets: number;
     openWindows: number;
   }>;
@@ -140,6 +142,7 @@ export default async function AdminHome() {
                       <th>League</th>
                       <th>Kickoff</th>
                       <th>Post</th>
+                      <th>Settle</th>
                       <th>Status</th>
                       <th>Pending</th>
                     </tr>
@@ -162,6 +165,30 @@ export default async function AdminHome() {
                               type="submit"
                             >
                               {match.isPostEnabled ? "Ticked" : "Tick"}
+                            </button>
+                          </form>
+                        </td>
+                        <td>
+                          <form className="score-form" action={`/api/matches/${match.id}/settle`} method="post">
+                            <input
+                              aria-label={`${match.title} home score`}
+                              defaultValue={match.homeScore ?? ""}
+                              min="0"
+                              name="homeScore"
+                              placeholder="H"
+                              type="number"
+                            />
+                            <span>-</span>
+                            <input
+                              aria-label={`${match.title} away score`}
+                              defaultValue={match.awayScore ?? ""}
+                              min="0"
+                              name="awayScore"
+                              placeholder="A"
+                              type="number"
+                            />
+                            <button className="settle-button" type="submit">
+                              Settle
                             </button>
                           </form>
                         </td>

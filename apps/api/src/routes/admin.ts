@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../config/db.js";
 import { syncConfiguredMatches } from "../services/matchSync.js";
+import { settleMatchManually } from "../services/settlement.js";
 
 export async function registerAdminRoutes(app: FastifyInstance) {
   app.get("/admin/summary", async () => {
@@ -94,6 +95,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         status: match.status,
         isPostEnabled: match.isPostEnabled,
         oddsSyncedAt: match.oddsSyncedAt?.toISOString() ?? null,
+        homeScore: match.homeScore,
+        awayScore: match.awayScore,
         pendingBets: match.bets.length,
         openWindows: match.windows.filter((window) => window.status === "OPEN").length
       }))
@@ -124,5 +127,31 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       id: match.id,
       isPostEnabled: match.isPostEnabled
     };
+  });
+
+  app.post<{
+    Params: {
+      id: string;
+    };
+    Body: {
+      homeScore?: number;
+      awayScore?: number;
+    };
+  }>("/admin/matches/:id/settle", async (request, reply) => {
+    const homeScore = Number(request.body.homeScore);
+    const awayScore = Number(request.body.awayScore);
+
+    if (
+      !Number.isInteger(homeScore) ||
+      !Number.isInteger(awayScore) ||
+      homeScore < 0 ||
+      awayScore < 0
+    ) {
+      return reply.code(400).send({
+        message: "homeScore and awayScore must be non-negative whole numbers"
+      });
+    }
+
+    return settleMatchManually(request.params.id, homeScore, awayScore);
   });
 }
