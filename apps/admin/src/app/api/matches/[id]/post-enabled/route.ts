@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { redirectBackToDashboard } from "../../../redirect";
 
 type RouteContext = {
   params: Promise<{
@@ -20,5 +21,5 @@ export async function POST(request: Request, context: RouteContext) {
     body: JSON.stringify({ enabled })
   });
 
-  return NextResponse.redirect(new URL("/", request.url), 303);
+  return redirectBackToDashboard(request);
 }
