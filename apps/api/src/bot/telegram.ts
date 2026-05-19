@@ -1,7 +1,8 @@
 import { Markup, Telegraf } from "telegraf";
 import { env } from "../config/env.js";
 import { formatOddsApiGroupMatchPost } from "./messages.js";
-import { getConfiguredWorldCupOdds } from "../services/oddsProvider.js";
+import { getPostEnabledMatches, syncConfiguredMatches } from "../services/matchSync.js";
+import { getConfiguredOddsForSports, getConfiguredSportKeys } from "../services/oddsProvider.js";
 import {
   beginBet,
   cancelPendingBet,
@@ -33,7 +34,7 @@ export function createTelegramBot() {
 
     if (payload?.startsWith("bet_")) {
       const eventId = payload.slice("bet_".length);
-      const { events } = await getConfiguredWorldCupOdds();
+      const { events } = await getConfiguredOddsForSports();
       const event = events.find((candidate) => candidate.id === eventId);
 
       if (!event) {
@@ -77,7 +78,7 @@ export function createTelegramBot() {
         "World Cup Niuniu status",
         "",
         `Odds provider: ${env.ODDS_PROVIDER}`,
-        `Sport: ${env.ODDS_API_SPORT_KEY}`,
+        `Sports: ${getConfiguredSportKeys().join(", ")}`,
         `Bookmaker: ${env.ODDS_API_BOOKMAKERS || "region default"}`,
         "Betting flow: 1X2 and Asian Handicap test mode"
       ].join("\n")
@@ -90,18 +91,26 @@ export function createTelegramBot() {
       return;
     }
 
-    await ctx.reply("Fetching upcoming World Cup odds...");
+    await ctx.reply("Syncing upcoming odds...");
 
-    const { events, provider } = await getConfiguredWorldCupOdds();
-    const upcomingEvents = events
-      .sort(
-        (left, right) =>
-          new Date(left.commence_time).getTime() - new Date(right.commence_time).getTime()
-      )
-      .slice(0, 3);
+    const { errors, events, provider } = await syncConfiguredMatches();
+    const eventById = new Map(events.map((event) => [event.id, event]));
+    const enabledMatches = await getPostEnabledMatches();
+    const upcomingEvents = enabledMatches.flatMap((match) => {
+      const event = eventById.get(match.oddsApiEventId);
+      return event ? [event] : [];
+    });
 
     if (upcomingEvents.length === 0) {
-      await ctx.reply(`No upcoming matches found from ${provider}.`);
+      await ctx.reply(
+        [
+          `No admin-selected matches found from ${provider}.`,
+          "Open the admin dashboard, sync matches, then enable the matches you want to post.",
+          errors.length > 0 ? `Sync warnings: ${errors.join(" | ")}` : ""
+        ]
+          .filter(Boolean)
+          .join("\n")
+      );
       return;
     }
 
@@ -116,7 +125,14 @@ export function createTelegramBot() {
       });
     }
 
-    await ctx.reply(`Posted ${upcomingEvents.length} matches to the group.`);
+    await ctx.reply(
+      [
+        `Posted ${upcomingEvents.length} admin-selected matches to the group.`,
+        errors.length > 0 ? `Sync warnings: ${errors.join(" | ")}` : ""
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
   });
 
   bot.hears("Balance", async (ctx) => {

@@ -33,7 +33,7 @@ export type OddsApiEvent = {
 export class OddsApiClient {
   private readonly baseUrl = "https://api.the-odds-api.com/v4";
 
-  async getWorldCupOdds(markets = ["h2h", "spreads"]): Promise<OddsApiEvent[]> {
+  async getOddsForSport(sportKey: string, markets = ["h2h", "spreads"]): Promise<OddsApiEvent[]> {
     if (!env.ODDS_API_KEY) {
       throw new Error("ODDS_API_KEY is required to fetch odds");
     }
@@ -52,7 +52,7 @@ export class OddsApiClient {
     }
 
     const response = await fetch(
-      `${this.baseUrl}/sports/${env.ODDS_API_SPORT_KEY}/odds?${params.toString()}`
+      `${this.baseUrl}/sports/${sportKey}/odds?${params.toString()}`
     );
 
     if (!response.ok) {
@@ -61,6 +61,10 @@ export class OddsApiClient {
     }
 
     return response.json() as Promise<OddsApiEvent[]>;
+  }
+
+  async getWorldCupOdds(markets = ["h2h", "spreads"]): Promise<OddsApiEvent[]> {
+    return this.getOddsForSport(env.ODDS_API_SPORT_KEY, markets);
   }
 }
 

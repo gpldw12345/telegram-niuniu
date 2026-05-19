@@ -28,8 +28,12 @@ type AdminSummary = {
   matches: Array<{
     id: string;
     title: string;
+    sportKey: string;
+    sportTitle: string | null;
     commenceTime: string;
     status: string;
+    isPostEnabled: boolean;
+    oddsSyncedAt: string | null;
     pendingBets: number;
     openWindows: number;
   }>;
@@ -75,7 +79,7 @@ async function getSummary() {
 export default async function AdminHome() {
   const { data, error } = await getSummary();
   const metrics = [
-    { label: "Open Matches", value: data.metrics.openMatches.toLocaleString() },
+    { label: "Post Enabled", value: data.metrics.openMatches.toLocaleString() },
     { label: "Pending Bets", value: data.metrics.pendingBets.toLocaleString() },
     { label: "Total Users", value: data.metrics.totalUsers.toLocaleString() },
     { label: "Point Exposure", value: formatPoints(data.metrics.pointExposure) }
@@ -103,7 +107,12 @@ export default async function AdminHome() {
             <p className="eyebrow">Operations</p>
             <h2>Dashboard</h2>
           </div>
-          <span className={error ? "status-pill warning" : "status-pill"}>{error || "Live"}</span>
+          <div className="topbar-actions">
+            <form action="/api/sync-matches" method="post">
+              <button type="submit">Sync Odds</button>
+            </form>
+            <span className={error ? "status-pill warning" : "status-pill"}>{error || "Live"}</span>
+          </div>
         </header>
 
         <section className="metric-grid" aria-label="Dashboard metrics">
@@ -128,7 +137,9 @@ export default async function AdminHome() {
                   <thead>
                     <tr>
                       <th>Match</th>
+                      <th>League</th>
                       <th>Kickoff</th>
+                      <th>Post</th>
                       <th>Status</th>
                       <th>Pending</th>
                     </tr>
@@ -137,7 +148,23 @@ export default async function AdminHome() {
                     {data.matches.map((match) => (
                       <tr key={match.id}>
                         <td>{match.title}</td>
+                        <td>{match.sportTitle || match.sportKey}</td>
                         <td>{formatDate(match.commenceTime)}</td>
+                        <td>
+                          <form action={`/api/matches/${match.id}/post-enabled`} method="post">
+                            <input
+                              name="enabled"
+                              type="hidden"
+                              value={match.isPostEnabled ? "false" : "true"}
+                            />
+                            <button
+                              className={match.isPostEnabled ? "tick-button selected" : "tick-button"}
+                              type="submit"
+                            >
+                              {match.isPostEnabled ? "Ticked" : "Tick"}
+                            </button>
+                          </form>
+                        </td>
                         <td>{match.status}</td>
                         <td>{match.pendingBets}</td>
                       </tr>

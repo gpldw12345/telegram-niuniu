@@ -18,6 +18,7 @@ const envSchema = z.object({
   ODDS_PROVIDER: z.enum(["mock", "odds-api"]).default("mock"),
   ODDS_API_KEY: z.string().optional(),
   ODDS_API_SPORT_KEY: z.string().default("soccer_fifa_world_cup"),
+  ODDS_API_SPORT_KEYS: z.string().optional(),
   ODDS_API_REGIONS: z.string().default("eu"),
   ODDS_API_BOOKMAKERS: z.string().optional(),
   ADMIN_JWT_SECRET: z.string().min(24).optional(),

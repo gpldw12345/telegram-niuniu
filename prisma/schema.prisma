@@ -97,10 +97,13 @@ model Match {
   id                   String          @id @default(cuid())
   oddsApiEventId        String          @unique
   sportKey             String
+  sportTitle           String?
   homeTeam             String
   awayTeam             String
   commenceTime         DateTime
   status               MatchStatus     @default(SCHEDULED)
+  isPostEnabled        Boolean         @default(false)
+  oddsSyncedAt         DateTime?
   homeScore            Int?
   awayScore            Int?
   halftimeHomeScore    Int?

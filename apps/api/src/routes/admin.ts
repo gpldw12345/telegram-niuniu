@@ -1,9 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../config/db.js";
+import { syncConfiguredMatches } from "../services/matchSync.js";
 
 export async function registerAdminRoutes(app: FastifyInstance) {
   app.get("/admin/summary", async () => {
-    const [totalUsers, pendingBets, openWindows, users, bets, matches, exposureAggregate] =
+    const [totalUsers, pendingBets, postEnabledMatches, users, bets, matches, exposureAggregate] =
       await Promise.all([
         prisma.telegramUser.count(),
         prisma.bet.count({
@@ -11,9 +12,10 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             status: "PENDING"
           }
         }),
-        prisma.betWindow.count({
+        prisma.match.count({
           where: {
-            status: "OPEN"
+            isPostEnabled: true,
+            status: "SCHEDULED"
           }
         }),
         prisma.telegramUser.findMany({
@@ -44,7 +46,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           orderBy: {
             commenceTime: "asc"
           },
-          take: 10
+          take: 50
         }),
         prisma.bet.aggregate({
           where: {
@@ -58,7 +60,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
     return {
       metrics: {
-        openMatches: openWindows,
+        openMatches: postEnabledMatches,
         pendingBets,
         totalUsers,
         pointExposure: exposureAggregate._sum.potentialPayout?.toNumber() ?? 0
@@ -86,11 +88,41 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       matches: matches.map((match) => ({
         id: match.id,
         title: `${match.homeTeam} vs ${match.awayTeam}`,
+        sportKey: match.sportKey,
+        sportTitle: match.sportTitle,
         commenceTime: match.commenceTime.toISOString(),
         status: match.status,
+        isPostEnabled: match.isPostEnabled,
+        oddsSyncedAt: match.oddsSyncedAt?.toISOString() ?? null,
         pendingBets: match.bets.length,
         openWindows: match.windows.filter((window) => window.status === "OPEN").length
       }))
+    };
+  });
+
+  app.post("/admin/sync-matches", async () => syncConfiguredMatches());
+
+  app.patch<{
+    Params: {
+      id: string;
+    };
+    Body: {
+      enabled?: boolean;
+    };
+  }>("/admin/matches/:id/post-enabled", async (request) => {
+    const enabled = Boolean(request.body.enabled);
+    const match = await prisma.match.update({
+      where: {
+        id: request.params.id
+      },
+      data: {
+        isPostEnabled: enabled
+      }
+    });
+
+    return {
+      id: match.id,
+      isPostEnabled: match.isPostEnabled
     };
   });
 }
