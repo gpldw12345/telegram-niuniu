@@ -1,18 +1,86 @@
-const metrics = [
-  { label: "Open Matches", value: "0" },
-  { label: "Pending Bets", value: "0" },
-  { label: "Total Users", value: "0" },
-  { label: "Point Exposure", value: "0" }
-];
+export const dynamic = "force-dynamic";
 
-const workQueue = [
-  "Connect admin login",
-  "Sync World Cup matches",
-  "Review handicap lines",
-  "Settle finished matches"
-];
+type AdminSummary = {
+  metrics: {
+    openMatches: number;
+    pendingBets: number;
+    totalUsers: number;
+    pointExposure: number;
+  };
+  users: Array<{
+    id: string;
+    username: string | null;
+    displayName: string;
+    pointsBalance: number;
+  }>;
+  bets: Array<{
+    id: string;
+    user: string;
+    match: string;
+    market: string;
+    selection: string;
+    stake: number;
+    odds: number;
+    potentialPayout: number;
+    status: string;
+    placedAt: string;
+  }>;
+  matches: Array<{
+    id: string;
+    title: string;
+    commenceTime: string;
+    status: string;
+    pendingBets: number;
+    openWindows: number;
+  }>;
+};
 
-export default function AdminHome() {
+const emptySummary: AdminSummary = {
+  metrics: {
+    openMatches: 0,
+    pendingBets: 0,
+    totalUsers: 0,
+    pointExposure: 0
+  },
+  users: [],
+  bets: [],
+  matches: []
+};
+
+async function getSummary() {
+  const apiBaseUrl = process.env.API_BASE_URL || "http://localhost:4000";
+
+  try {
+    const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}/admin/summary`);
+
+    if (!response.ok) {
+      return {
+        data: emptySummary,
+        error: `API returned ${response.status}`
+      };
+    }
+
+    return {
+      data: (await response.json()) as AdminSummary,
+      error: null
+    };
+  } catch (error) {
+    return {
+      data: emptySummary,
+      error: error instanceof Error ? error.message : "Could not reach API"
+    };
+  }
+}
+
+export default async function AdminHome() {
+  const { data, error } = await getSummary();
+  const metrics = [
+    { label: "Open Matches", value: data.metrics.openMatches.toLocaleString() },
+    { label: "Pending Bets", value: data.metrics.pendingBets.toLocaleString() },
+    { label: "Total Users", value: data.metrics.totalUsers.toLocaleString() },
+    { label: "Point Exposure", value: formatPoints(data.metrics.pointExposure) }
+  ];
+
   return (
     <main className="admin-shell">
       <aside className="sidebar">
@@ -35,7 +103,7 @@ export default function AdminHome() {
             <p className="eyebrow">Operations</p>
             <h2>Dashboard</h2>
           </div>
-          <button type="button">Sync Matches</button>
+          <span className={error ? "status-pill warning" : "status-pill"}>{error || "Live"}</span>
         </header>
 
         <section className="metric-grid" aria-label="Dashboard metrics">
@@ -50,24 +118,103 @@ export default function AdminHome() {
         <section className="main-grid">
           <div className="panel">
             <div className="panel-header">
-              <h3>Today's Matches</h3>
-              <button type="button" className="secondary">Open Match</button>
+              <h3>Matches</h3>
             </div>
-            <div className="empty-state">No matches synced yet.</div>
+            {data.matches.length === 0 ? (
+              <div className="empty-state">No matches recorded yet.</div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Match</th>
+                      <th>Kickoff</th>
+                      <th>Status</th>
+                      <th>Pending</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.matches.map((match) => (
+                      <tr key={match.id}>
+                        <td>{match.title}</td>
+                        <td>{formatDate(match.commenceTime)}</td>
+                        <td>{match.status}</td>
+                        <td>{match.pendingBets}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           <div className="panel">
             <div className="panel-header">
-              <h3>Work Queue</h3>
+              <h3>Top Users</h3>
             </div>
-            <ul className="queue">
-              {workQueue.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
+            {data.users.length === 0 ? (
+              <div className="empty-state">No users yet.</div>
+            ) : (
+              <ul className="list">
+                {data.users.map((user) => (
+                  <li key={user.id}>
+                    <span>{user.displayName}</span>
+                    <strong>{formatPoints(user.pointsBalance)}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
+        </section>
+
+        <section className="panel wide-panel">
+          <div className="panel-header">
+            <h3>Recent Bets</h3>
+          </div>
+          {data.bets.length === 0 ? (
+            <div className="empty-state">No bets yet.</div>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Match</th>
+                    <th>Selection</th>
+                    <th>Stake</th>
+                    <th>Return</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.bets.map((bet) => (
+                    <tr key={bet.id}>
+                      <td>{bet.user}</td>
+                      <td>{bet.match}</td>
+                      <td>{bet.selection}</td>
+                      <td>{formatPoints(bet.stake)}</td>
+                      <td>{formatPoints(bet.potentialPayout)}</td>
+                      <td>{bet.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </section>
     </main>
   );
+}
+
+function formatPoints(value: number) {
+  return Math.round(value).toLocaleString();
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-MY", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Kuala_Lumpur"
+  }).format(new Date(value));
 }

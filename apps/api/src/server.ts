@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import type { Telegraf } from "telegraf";
 import type { Update } from "telegraf/types";
 import { env, isProduction } from "./config/env.js";
+import { registerAdminRoutes } from "./routes/admin.js";
 import { registerHealthRoutes } from "./routes/health.js";
 
 export async function createServer(bot?: Telegraf) {
@@ -13,6 +14,7 @@ export async function createServer(bot?: Telegraf) {
   });
 
   await registerHealthRoutes(app);
+  await registerAdminRoutes(app);
 
   app.get("/", async () => ({
     name: "telegram-niuniu-api",
