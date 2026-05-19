@@ -9,6 +9,8 @@ type BetSelection = {
   market: Market;
   label: string;
   odds: number;
+  selectionKey: string;
+  teamSide?: string;
   handicap?: number;
 };
 
@@ -86,6 +88,10 @@ export function getUserConfirmedBets(userId: number) {
   return confirmedBets.filter((bet) => bet.userId === userId);
 }
 
+export function cancelPendingBet(userId: number) {
+  pendingBets.delete(userId);
+}
+
 export function isAwaitingStake(userId: number) {
   return pendingBets.get(userId)?.awaitingStake ?? false;
 }
@@ -145,6 +151,8 @@ export function getSelections(event: OddsApiEvent, market: Market): BetSelection
       return {
         market,
         label: `${name === "Draw" ? "Draw" : displayTeamName(name)} @ ${formatOdds(outcome.price)}`,
+        selectionKey: name,
+        teamSide: name === "Draw" ? "DRAW" : name === event.home_team ? "HOME" : "AWAY",
         odds: outcome.price
       };
     });
@@ -216,12 +224,16 @@ function pickAsianHandicapSelections(event: OddsApiEvent): BetSelection[] {
           {
             market: "ah",
             label: `${displayTeamName(event.home_team)} ${formatPoint(home.point)} @ ${formatOdds(home.price)}`,
+            selectionKey: `${event.home_team}:${home.point}`,
+            teamSide: "HOME",
             odds: home.price,
             handicap: home.point
           },
           {
             market: "ah",
             label: `${displayTeamName(event.away_team)} ${formatPoint(away.point)} @ ${formatOdds(away.price)}`,
+            selectionKey: `${event.away_team}:${away.point}`,
+            teamSide: "AWAY",
             odds: away.price,
             handicap: away.point
           }

@@ -4,13 +4,13 @@ import { formatOddsApiGroupMatchPost } from "./messages.js";
 import { getConfiguredWorldCupOdds } from "../services/oddsProvider.js";
 import {
   beginBet,
+  cancelPendingBet,
   confirmKeyboard,
   confirmPendingBet,
   formatBetHeader,
   formatBetSlip,
   getPendingBet,
   getSelections,
-  getUserConfirmedBets,
   marketKeyboard,
   selectionKeyboard,
   setPendingSelection,
@@ -18,6 +18,8 @@ import {
   isAwaitingStake
 } from "./betFlow.js";
 import { displayTeamName } from "./teamNames.js";
+import { getRecentBets, InsufficientPointsError, placeConfirmedBet } from "../services/bets.js";
+import { getTelegramUserBalance } from "../services/users.js";
 
 export function createTelegramBot() {
   if (!env.TELEGRAM_BOT_TOKEN) {
@@ -118,23 +120,23 @@ export function createTelegramBot() {
   });
 
   bot.hears("Balance", async (ctx) => {
-    await ctx.reply("Balance lookup will be connected after the user wallet service is wired.");
+    const balance = await getTelegramUserBalance(ctx.from);
+    await ctx.reply(`Balance: ${balance.toFixed(0)} points`);
   });
 
   bot.hears("My Bets", async (ctx) => {
-    const bets = getUserConfirmedBets(ctx.from.id);
+    const bets = await getRecentBets(ctx.from);
 
     if (bets.length === 0) {
-      await ctx.reply("No confirmed test bets yet.");
+      await ctx.reply("No bets yet.");
       return;
     }
 
     await ctx.reply(
       bets
-        .slice(-5)
         .map(
           (bet, index) =>
-            `${index + 1}. ${displayTeamName(bet.event.home_team)} vs ${displayTeamName(bet.event.away_team)}\n${bet.selection.label}\nStake: ${bet.stake}`
+            `${index + 1}. ${displayTeamName(bet.match.homeTeam)} vs ${displayTeamName(bet.match.awayTeam)}\n${bet.selectionLabel}\nStake: ${bet.stake.toFixed(0)} | Status: ${bet.status}`
         )
         .join("\n\n")
     );
@@ -238,20 +240,61 @@ export function createTelegramBot() {
       return;
     }
 
-    await ctx.reply(
-      [
-        "Bet confirmed",
-        "",
-        formatBetSlip(confirmed),
-        "",
-        "Note: this is test mode. Point deduction and database storage are next."
-      ].join("\n")
-    );
+    try {
+      const placed = await placeConfirmedBet(ctx.from, confirmed);
+
+      await ctx.reply(
+        [
+          "Bet confirmed",
+          "",
+          formatBetSlip(confirmed),
+          "",
+          `Balance after bet: ${placed.balanceAfter.toFixed(0)} points`
+        ].join("\n")
+      );
+      return;
+    } catch (error) {
+      if (error instanceof InsufficientPointsError) {
+        await ctx.reply("Not enough points for this stake. Please choose a smaller stake.");
+        return;
+      }
+
+      throw error;
+    }
   });
 
   bot.action("bet:cancel", async (ctx) => {
+    cancelPendingBet(ctx.from.id);
     await ctx.answerCbQuery();
     await ctx.reply("Bet cancelled. Use the group Place Bet button to start again.");
+  });
+
+  bot.command("cancel", async (ctx) => {
+    cancelPendingBet(ctx.from.id);
+    await ctx.reply("Bet cancelled. Use the group Place Bet button to start again.");
+  });
+
+  bot.command("balance", async (ctx) => {
+    const balance = await getTelegramUserBalance(ctx.from);
+    await ctx.reply(`Balance: ${balance.toFixed(0)} points`);
+  });
+
+  bot.command("mybets", async (ctx) => {
+    const bets = await getRecentBets(ctx.from);
+
+    if (bets.length === 0) {
+      await ctx.reply("No bets yet.");
+      return;
+    }
+
+    await ctx.reply(
+      bets
+        .map(
+          (bet, index) =>
+            `${index + 1}. ${displayTeamName(bet.match.homeTeam)} vs ${displayTeamName(bet.match.awayTeam)}\n${bet.selectionLabel}\nStake: ${bet.stake.toFixed(0)} | Status: ${bet.status}`
+        )
+        .join("\n\n")
+    );
   });
 
   bot.catch((error, ctx) => {
