@@ -11,6 +11,8 @@
     "dev:api": "npm run dev --workspace apps/api",
     "dev:admin": "npm run dev --workspace apps/admin",
     "build": "npm run build --workspaces",
+    "build:api": "npm run build --workspace packages/shared && npm run build --workspace apps/api",
+    "build:admin": "npm run build --workspace apps/admin",
     "typecheck": "npm run typecheck --workspaces",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
