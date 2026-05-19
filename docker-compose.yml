@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: telegram-niuniu-postgres
+    environment:
+      POSTGRES_DB: telegram_niuniu
+      POSTGRES_USER: niuniu
+      POSTGRES_PASSWORD: niuniu
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

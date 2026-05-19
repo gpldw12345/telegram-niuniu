@@ -1,0 +1,240 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  HALF_TIME
+  FINISHED
+  CANCELLED
+}
+
+enum BetWindowType {
+  PRE_MATCH
+  HALF_TIME
+}
+
+enum BetWindowStatus {
+  CLOSED
+  OPEN
+  SETTLED
+}
+
+enum MarketType {
+  ONE_X_TWO
+  ASIAN_HANDICAP
+  CORRECT_SCORE
+}
+
+enum BetStatus {
+  PENDING
+  WON
+  LOST
+  VOID
+  HALF_WON
+  HALF_LOST
+  PUSHED
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+  BET_STAKE
+  BET_WIN
+  BET_REFUND
+  ADMIN_ADJUSTMENT
+}
+
+enum TransactionSource {
+  ADMIN
+  BET
+  SETTLEMENT
+  SYSTEM
+}
+
+enum OddsSource {
+  ODDS_API
+  ADMIN
+  SYSTEM
+}
+
+model TelegramUser {
+  id             String              @id @default(cuid())
+  telegramId     String              @unique
+  username       String?
+  firstName      String?
+  lastName       String?
+  displayName    String?
+  pointsBalance  Decimal             @default(0) @db.Decimal(18, 2)
+  isBlocked      Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  bets           Bet[]
+  transactions   WalletTransaction[]
+
+  @@index([username])
+}
+
+model AdminUser {
+  id           String              @id @default(cuid())
+  email        String              @unique
+  name         String?
+  passwordHash String
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  transactions WalletTransaction[]
+  auditLogs    AuditLog[]
+}
+
+model Match {
+  id                   String          @id @default(cuid())
+  oddsApiEventId        String          @unique
+  sportKey             String
+  homeTeam             String
+  awayTeam             String
+  commenceTime         DateTime
+  status               MatchStatus     @default(SCHEDULED)
+  homeScore            Int?
+  awayScore            Int?
+  halftimeHomeScore    Int?
+  halftimeAwayScore    Int?
+  groupChatId          String?
+  preMatchMessageId    String?
+  halfTimeMessageId    String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  windows              BetWindow[]
+  oddsSnapshots        OddsSnapshot[]
+  offers               MarketOffer[]
+  bets                 Bet[]
+
+  @@index([commenceTime])
+  @@index([status])
+}
+
+model BetWindow {
+  id        String          @id @default(cuid())
+  matchId   String
+  type      BetWindowType
+  status    BetWindowStatus @default(CLOSED)
+  opensAt   DateTime?
+  closesAt  DateTime?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  match     Match           @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  offers    MarketOffer[]
+  bets      Bet[]
+
+  @@unique([matchId, type])
+  @@index([status])
+}
+
+model OddsSnapshot {
+  id             String         @id @default(cuid())
+  matchId        String
+  windowType     BetWindowType
+  source         OddsSource     @default(ODDS_API)
+  bookmakerKey   String?
+  bookmakerTitle String?
+  raw            Json
+  capturedAt     DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  match          Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([matchId, windowType, capturedAt])
+}
+
+model MarketOffer {
+  id               String         @id @default(cuid())
+  matchId          String
+  windowId         String
+  market           MarketType
+  selectionKey     String
+  selectionLabel   String
+  teamSide         String?
+  handicap         Decimal?       @db.Decimal(5, 2)
+  correctHomeScore Int?
+  correctAwayScore Int?
+  odds             Decimal        @db.Decimal(10, 2)
+  source           OddsSource     @default(ODDS_API)
+  raw              Json?
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  match            Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  window           BetWindow      @relation(fields: [windowId], references: [id], onDelete: Cascade)
+  bets             Bet[]
+
+  @@index([matchId, windowId, market, isActive])
+  @@index([selectionKey])
+}
+
+model Bet {
+  id               String         @id @default(cuid())
+  userId           String
+  matchId          String
+  windowId         String
+  offerId          String?
+  market           MarketType
+  selectionKey     String
+  selectionLabel   String
+  teamSide         String?
+  handicap         Decimal?       @db.Decimal(5, 2)
+  correctHomeScore Int?
+  correctAwayScore Int?
+  odds             Decimal        @db.Decimal(10, 2)
+  stake            Decimal        @db.Decimal(18, 2)
+  potentialPayout  Decimal        @db.Decimal(18, 2)
+  status           BetStatus      @default(PENDING)
+  settlementNote   String?
+  placedAt         DateTime       @default(now())
+  settledAt        DateTime?
+  user             TelegramUser   @relation(fields: [userId], references: [id])
+  match            Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  window           BetWindow      @relation(fields: [windowId], references: [id], onDelete: Restrict)
+  offer            MarketOffer?   @relation(fields: [offerId], references: [id], onDelete: SetNull)
+
+  @@index([userId, placedAt])
+  @@index([matchId, status])
+  @@index([windowId, status])
+}
+
+model WalletTransaction {
+  id               String             @id @default(cuid())
+  userId           String
+  amount           Decimal            @db.Decimal(18, 2)
+  balanceAfter     Decimal            @db.Decimal(18, 2)
+  type             TransactionType
+  source           TransactionSource
+  referenceType    String?
+  referenceId      String?
+  note             String?
+  createdByAdminId String?
+  createdAt        DateTime           @default(now())
+  user             TelegramUser       @relation(fields: [userId], references: [id])
+  createdByAdmin   AdminUser?         @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([referenceType, referenceId])
+}
+
+model AuditLog {
+  id           String     @id @default(cuid())
+  actorAdminId String?
+  action       String
+  entityType   String
+  entityId     String?
+  metadata     Json?
+  createdAt    DateTime   @default(now())
+  actorAdmin   AdminUser?  @relation(fields: [actorAdminId], references: [id], onDelete: SetNull)
+
+  @@index([actorAdminId, createdAt])
+  @@index([entityType, entityId])
+}

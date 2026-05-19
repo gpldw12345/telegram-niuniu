@@ -1,0 +1,28 @@
+{
+  "name": "@telegram-niuniu/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "@telegram-niuniu/shared": "0.1.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.0.0",
+    "node-cron": "^3.0.3",
+    "pino": "^9.5.0",
+    "telegraf": "^4.16.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "pino-pretty": "^11.2.2",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}
