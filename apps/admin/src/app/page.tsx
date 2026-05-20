@@ -1,5 +1,5 @@
 import { AdminShell } from "./AdminShell";
-import { BetsTable, MatchesTable, Topbar, UsersList } from "./components";
+import { BetsTable, MatchesTable, Topbar } from "./components";
 import { formatPoints, getSummary } from "./adminData";
 
 export const dynamic = "force-dynamic";
@@ -26,22 +26,12 @@ export default async function DashboardPage() {
         ))}
       </section>
 
-      <section className="main-grid">
-        <div className="panel">
+      <section className="panel">
           <div className="panel-header">
             <h3>Next Matches</h3>
             <a className="panel-link" href="/matches">Open</a>
           </div>
           <MatchesTable matches={data.matches.slice(0, 5)} />
-        </div>
-
-        <div className="panel">
-          <div className="panel-header">
-            <h3>Top Users</h3>
-            <a className="panel-link" href="/users">Open</a>
-          </div>
-          <UsersList users={data.users.slice(0, 5)} />
-        </div>
       </section>
 
       <section className="panel wide-panel">

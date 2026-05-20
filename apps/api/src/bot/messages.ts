@@ -41,18 +41,18 @@ export function formatOddsApiGroupMatchPost(event: OddsApiEvent) {
   const isBasketball = event.sport_key.startsWith("basketball_");
 
   return [
-    `${displayTeamName(event.home_team)} vs ${displayTeamName(event.away_team)}`,
-    kickoff,
+    `🏟 ${displayTeamName(event.home_team)} vs ${displayTeamName(event.away_team)}`,
+    `⏰ ${kickoff}`,
     "",
     isBasketball ? "Moneyline" : "1X2",
-    `${displayTeamName(event.home_team)}: ${formatOdds(homeOdd?.price)}`,
-    isBasketball ? "" : `Draw: ${formatOdds(drawOdd?.price)}`,
-    `${displayTeamName(event.away_team)}: ${formatOdds(awayOdd?.price)}`,
+    formatMoneylineLine(event.home_team, homeOdd?.price),
+    isBasketball ? "" : formatMoneylineLine("Draw", drawOdd?.price),
+    formatMoneylineLine(event.away_team, awayOdd?.price),
     "",
-    "Asian Handicap",
+    "AH",
     ...formatHandicapLines(handicapLines, event.home_team, event.away_team),
     "",
-    "Over / Under",
+    "O/U",
     ...formatTotalLines(totalLines)
   ].filter((line) => line !== "").join("\n");
 }
@@ -160,10 +160,11 @@ function formatHandicapLines(lines: HandicapLine[], homeTeam: string, awayTeam: 
     return ["No AH odds available yet"];
   }
 
-  return lines.map(
-    (line) =>
-      `${displayTeamName(homeTeam)} ${formatPoint(line.homePoint)} @ ${formatOdds(line.homePrice)} | ${displayTeamName(awayTeam)} ${formatPoint(line.awayPoint)} @ ${formatOdds(line.awayPrice)}`
-  );
+  return lines.map((line) => {
+    const home = shortTeamName(homeTeam);
+    const away = shortTeamName(awayTeam);
+    return `${formatPoint(line.homePoint)}  ${home} ${formatOdds(line.homePrice)} / ${away} ${formatOdds(line.awayPrice)}`;
+  });
 }
 
 function formatTotalLines(lines: TotalLine[]) {
@@ -172,9 +173,21 @@ function formatTotalLines(lines: TotalLine[]) {
   }
 
   return lines.map(
-    (line) =>
-      `Over ${formatPoint(line.point)} @ ${formatOdds(line.overPrice)} | Under ${formatPoint(line.point)} @ ${formatOdds(line.underPrice)}`
+    (line) => `${formatPoint(line.point)}  Over ${formatOdds(line.overPrice)} / Under ${formatOdds(line.underPrice)}`
   );
+}
+
+function formatMoneylineLine(name: string, odds: number | undefined) {
+  return `${name === "Draw" ? "Draw" : shortTeamName(name)} ${formatOdds(odds)}`;
+}
+
+function shortTeamName(name: string) {
+  return displayTeamName(name)
+    .replace("Manchester City", "Man City")
+    .replace("Manchester United", "Man United")
+    .replace("Nottingham Forest", "Nottm Forest")
+    .replace("Cleveland Cavaliers", "Cavaliers")
+    .replace("New York Knicks", "Knicks");
 }
 
 function formatPoint(point: number | undefined) {
