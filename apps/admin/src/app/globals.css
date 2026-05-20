@@ -466,7 +466,7 @@ tbody tr:last-child td {
 
 .cs-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  grid-template-columns: repeat(3, minmax(92px, 1fr));
   gap: 10px;
   padding: 18px;
 }
@@ -488,6 +488,10 @@ tbody tr:last-child td {
   border-radius: 6px;
   padding: 0 10px;
   font-weight: 700;
+}
+
+.cs-field-empty {
+  min-height: 60px;
 }
 
 .adjust-form,

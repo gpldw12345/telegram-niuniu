@@ -19,7 +19,7 @@ import {
   isAwaitingStake
 } from "./betFlow.js";
 import { displayTeamName } from "./teamNames.js";
-import { getCorrectScoreSelections } from "../services/correctScore.js";
+import { correctScoreRows, getCorrectScoreSelections } from "../services/correctScore.js";
 import { getUserBetHistory, InsufficientPointsError, placeConfirmedBet } from "../services/bets.js";
 import { getTelegramUserBalance } from "../services/users.js";
 
@@ -185,11 +185,7 @@ export function createTelegramBot() {
 
       await ctx.reply(
         `Choose correct score:\n\n${formatBetHeader(pending.event)}`,
-        Markup.inlineKeyboard(
-          selections.map((selection, index) => [
-            Markup.button.callback(selection.label, `bet:selection:cs:${index}`)
-          ])
-        )
+        Markup.inlineKeyboard(correctScoreKeyboardRows(selections))
       );
       return;
     }
@@ -399,6 +395,30 @@ function formatMoney(value: number) {
 
 function formatSignedMoney(value: number) {
   return `${value >= 0 ? "+" : ""}${formatMoney(value)}`;
+}
+
+function correctScoreKeyboardRows(selections: Awaited<ReturnType<typeof getCorrectScoreSelections>>) {
+  const indexByKey = new Map(selections.map((selection, index) => [selection.selectionKey, index]));
+  const labelByKey = new Map(selections.map((selection) => [selection.selectionKey, selection.label]));
+
+  return correctScoreRows().flatMap((row) => {
+    const buttons = row.flatMap((score) => {
+      if (!score) {
+        return [];
+      }
+
+      const index = indexByKey.get(score.key);
+      const label = labelByKey.get(score.key);
+
+      if (index === undefined || !label) {
+        return [];
+      }
+
+      return Markup.button.callback(label, `bet:selection:cs:${index}`);
+    });
+
+    return buttons.length > 0 ? [buttons] : [];
+  });
 }
 
 function formatStat(value: number) {

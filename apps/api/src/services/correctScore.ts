@@ -4,16 +4,23 @@ import type { BetSelection } from "../bot/betFlow.js";
 import { displayTeamName } from "../bot/teamNames.js";
 
 export function correctScoreKeys() {
-  const keys: Array<{ key: string; label: string; home: number | null; away: number | null }> = [];
+  return correctScoreRows().flatMap((row) => row.filter((score) => score !== null));
+}
 
-  for (let home = 0; home <= 4; home += 1) {
-    for (let away = 0; away <= 4; away += 1) {
-      keys.push({ key: `${home}-${away}`, label: `${home}-${away}`, home, away });
-    }
-  }
-
-  keys.push({ key: "OTHER", label: "Other Score", home: null, away: null });
-  return keys;
+export function correctScoreRows() {
+  return [
+    [scoreKey(1, 0), scoreKey(0, 0), scoreKey(0, 1)],
+    [scoreKey(2, 0), scoreKey(1, 1), scoreKey(0, 2)],
+    [scoreKey(2, 1), scoreKey(2, 2), scoreKey(1, 2)],
+    [scoreKey(3, 0), scoreKey(3, 3), scoreKey(0, 3)],
+    [scoreKey(3, 1), scoreKey(4, 4), scoreKey(1, 3)],
+    [scoreKey(3, 2), null, scoreKey(2, 3)],
+    [scoreKey(4, 0), null, scoreKey(0, 4)],
+    [scoreKey(4, 1), null, scoreKey(1, 4)],
+    [scoreKey(4, 2), null, scoreKey(2, 4)],
+    [scoreKey(4, 3), null, scoreKey(3, 4)],
+    [null, { key: "OTHER", label: "Other Score", home: null, away: null }, null]
+  ];
 }
 
 export async function getCorrectScoreAdmin(matchId: string) {
@@ -41,7 +48,8 @@ export async function getCorrectScoreAdmin(matchId: string) {
         ...score,
         odds: offer?.odds.toNumber() ?? ""
       };
-    })
+    }),
+    rows: correctScoreRows().map((row) => row.map((score) => score?.key ?? null))
   };
 }
 
@@ -128,12 +136,24 @@ export async function getCorrectScoreSelections(oddsApiEventId: string): Promise
     return [];
   }
 
-  return match.offers.map((offer) => ({
-    market: "cs",
-    label: `${offer.selectionLabel} @ ${offer.odds.toFixed(2).replace(/\.00$/, "")}`,
-    selectionKey: offer.selectionKey,
-    odds: offer.odds.toNumber(),
-    correctHomeScore: offer.correctHomeScore ?? undefined,
-    correctAwayScore: offer.correctAwayScore ?? undefined
-  }));
+  return correctScoreKeys().flatMap((score) => {
+    const offer = match.offers.find((candidate) => candidate.selectionKey === score.key);
+
+    if (!offer) {
+      return [];
+    }
+
+    return {
+      market: "cs" as const,
+      label: `${offer.selectionLabel} @ ${offer.odds.toFixed(2).replace(/\.00$/, "")}`,
+      selectionKey: offer.selectionKey,
+      odds: offer.odds.toNumber(),
+      correctHomeScore: offer.correctHomeScore ?? undefined,
+      correctAwayScore: offer.correctAwayScore ?? undefined
+    };
+  });
+}
+
+function scoreKey(home: number, away: number) {
+  return { key: `${home}-${away}`, label: `${home}-${away}`, home, away };
 }

@@ -120,6 +120,7 @@ export async function getCorrectScore(matchId: string) {
       away: number | null;
       odds: number | "";
     }>;
+    rows: Array<Array<string | null>>;
   }>;
 }
 
