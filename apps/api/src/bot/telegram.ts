@@ -359,7 +359,12 @@ async function sendBetHistory(ctx: Context, filter: BetHistoryFilter) {
     return;
   }
 
-  await ctx.reply([title, formatUserStats(stats), "", ...bets.map(formatBetHistoryLine)].join("\n\n"));
+  const summary =
+    filter === "settled"
+      ? formatUserStats(stats)
+      : formatOpenBetSummary(filter, bets.length, bets.reduce((total, bet) => total + bet.stake.toNumber(), 0));
+
+  await ctx.reply([title, summary, "", ...bets.map(formatBetHistoryLine)].join("\n\n"));
 }
 
 function betHistoryKeyboard() {
@@ -404,6 +409,13 @@ function formatUserStats(stats: {
     `Total bet: ${formatMoney(stats.totalStake)}`,
     `Net: ${formatSignedMoney(stats.net)}`
   ].join("\n");
+}
+
+function formatOpenBetSummary(filter: BetHistoryFilter, count: number, totalBet: number) {
+  const label = filter === "running" ? "running" : "upcoming";
+  const gameWord = count === 1 ? "game" : "games";
+
+  return `You have ${count} ${label} ${gameWord} with total bet ${formatMoney(totalBet)}.`;
 }
 
 function formatBetHistoryLine(
