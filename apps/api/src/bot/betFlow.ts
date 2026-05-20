@@ -188,24 +188,31 @@ export function formatBetHeader(event: OddsApiEvent) {
   return [`${displayTeamName(event.home_team)} vs ${displayTeamName(event.away_team)}`, kickoff].join("\n");
 }
 
-export function formatBetSlip(pending: PendingBet) {
+export function formatBetSlip(pending: PendingBet, options: { currentBalance?: number } = {}) {
   if (!pending.selection) {
     return "No selection yet.";
   }
 
   const potentialPayout = pending.stake
-    ? `\nPotential return: ${formatOdds(pending.stake * pending.selection.odds)} points`
+    ? `\nPotential return: ${formatCurrency(pending.stake * pending.selection.odds)}`
     : "";
+  const currentBalance =
+    typeof options.currentBalance === "number" ? `Current balance: ${formatCurrency(options.currentBalance)}` : "";
 
   return [
     formatBetHeader(pending.event),
     "",
     `Selection: ${pending.selection.label}`,
-    pending.stake ? `Stake: ${pending.stake} points` : "Stake: not selected",
+    pending.stake ? `Bet: ${formatCurrency(pending.stake)}` : "Bet: not selected",
+    currentBalance,
     potentialPayout
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function formatCurrency(value: number) {
+  return `RM${formatOdds(value)}`;
 }
 
 function pickAsianHandicapSelections(event: OddsApiEvent): BetSelection[] {

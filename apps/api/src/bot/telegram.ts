@@ -262,7 +262,12 @@ export function createTelegramBot() {
       return;
     }
 
-    await ctx.reply(`${formatBetSlip(pending)}\n\nConfirm bet?`, confirmKeyboard());
+    const balance = await getTelegramUserBalance(ctx.from);
+
+    await ctx.reply(
+      `${formatBetSlip(pending, { currentBalance: balance.toNumber() })}\n\nConfirm bet?`,
+      confirmKeyboard()
+    );
   });
 
   bot.action("bet:confirm", async (ctx) => {
@@ -284,7 +289,7 @@ export function createTelegramBot() {
           "",
           formatBetSlip(confirmed),
           "",
-          `Balance after bet: ${placed.balanceAfter.toFixed(0)} points`
+          `Balance after bet: RM${placed.balanceAfter.toFixed(0)}`
         ].join("\n")
       );
 
@@ -296,8 +301,8 @@ export function createTelegramBot() {
               `${formatUserMention(ctx.from)} bet`,
               formatBetHeader(confirmed.event),
               confirmed.selection.label,
-              `Stake: ${confirmed.stake} points`,
-              `Balance: ${placed.balanceAfter.toFixed(0)} points`
+              `Bet: RM${confirmed.stake}`,
+              `Balance: RM${placed.balanceAfter.toFixed(0)}`
             ].join("\n")
           )
           .catch(() => undefined);
