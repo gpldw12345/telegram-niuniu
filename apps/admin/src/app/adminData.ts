@@ -3,7 +3,7 @@ export type AdminSummary = {
     openMatches: number;
     pendingBets: number;
     totalUsers: number;
-    pointExposure: number;
+    profitLoss: number;
   };
   users: Array<{
     id: string;
@@ -65,7 +65,7 @@ const emptySummary: AdminSummary = {
     openMatches: 0,
     pendingBets: 0,
     totalUsers: 0,
-    pointExposure: 0
+    profitLoss: 0
   },
   users: [],
   bets: [],

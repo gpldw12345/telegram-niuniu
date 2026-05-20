@@ -30,7 +30,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
   app.get("/admin/summary", async () => {
     const now = new Date();
     const fiveDaysLater = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
-    const [totalUsers, pendingBets, postEnabledMatches, users, bets, matches, transactions, exposureAggregate] =
+    const [totalUsers, pendingBets, postEnabledMatches, users, bets, matches, transactions, allBets] =
       await Promise.all([
         prisma.telegramUser.count(),
         prisma.bet.count({
@@ -92,22 +92,16 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           },
           take: 50
         }),
-        prisma.bet.aggregate({
-          where: {
-            status: "PENDING"
-          },
-          _sum: {
-            potentialPayout: true
-          }
-        })
+        prisma.bet.findMany()
       ]);
+    const companyProfitLoss = -calculateBetStats(allBets).net;
 
     return {
       metrics: {
         openMatches: postEnabledMatches,
         pendingBets,
         totalUsers,
-        pointExposure: exposureAggregate._sum.potentialPayout?.toNumber() ?? 0
+        profitLoss: companyProfitLoss
       },
       users: users.map((user) => ({
         id: user.id,

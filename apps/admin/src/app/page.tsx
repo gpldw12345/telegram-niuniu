@@ -10,7 +10,7 @@ export default async function DashboardPage() {
     { label: "Post Enabled", value: data.metrics.openMatches.toLocaleString() },
     { label: "Pending Bets", value: data.metrics.pendingBets.toLocaleString() },
     { label: "Total Users", value: data.metrics.totalUsers.toLocaleString() },
-    { label: "RM Exposure", value: formatPoints(data.metrics.pointExposure) }
+    { label: "Profit/Loss", value: formatPoints(data.metrics.profitLoss) }
   ];
 
   return (
