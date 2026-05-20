@@ -39,20 +39,22 @@ export function formatOddsApiGroupMatchPost(event: OddsApiEvent) {
   const handicapLines = pickAsianHandicapLines(event);
   const totalLines = pickOverUnderLines(event);
   const isBasketball = event.sport_key.startsWith("basketball_");
+  const sportIcon = isBasketball ? "🏀" : "⚽";
+  const divider = "────────────";
 
   return [
-    `🏟 ${displayTeamName(event.home_team)} vs ${displayTeamName(event.away_team)}`,
+    `${sportIcon} ${displayTeamName(event.home_team)} vs ${displayTeamName(event.away_team)}`,
     `⏰ ${kickoff}`,
     "",
     isBasketball ? "Moneyline" : "1X2",
     formatMoneylineLine(event.home_team, homeOdd?.price),
     isBasketball ? "" : formatMoneylineLine("Draw", drawOdd?.price),
     formatMoneylineLine(event.away_team, awayOdd?.price),
-    "",
-    "AH",
+    divider,
+    "AH（让/吃）",
     ...formatHandicapLines(handicapLines, event.home_team, event.away_team),
-    "",
-    "O/U",
+    divider,
+    "O/U（大/小）",
     ...formatTotalLines(totalLines)
   ].filter((line) => line !== "").join("\n");
 }
