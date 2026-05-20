@@ -396,6 +396,17 @@ tbody tr:last-child td {
   font-weight: 800;
 }
 
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  border-radius: 6px;
+  padding: 0 14px;
+  background: var(--accent);
+  color: white;
+  font-weight: 800;
+}
+
 .cs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));

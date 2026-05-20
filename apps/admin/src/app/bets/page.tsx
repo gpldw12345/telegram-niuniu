@@ -9,7 +9,12 @@ export default async function BetsPage() {
 
   return (
     <AdminShell active="Bets">
-      <Topbar eyebrow="Bet Monitoring" error={error} title="Bets" />
+      <Topbar
+        action={<a className="export-button" href="/api/export/bets">Export Bets</a>}
+        eyebrow="Bet Monitoring"
+        error={error}
+        title="Bets"
+      />
       <section className="panel">
         <div className="panel-header">
           <h3>Latest Bets</h3>

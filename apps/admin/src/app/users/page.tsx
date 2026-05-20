@@ -9,7 +9,12 @@ export default async function UsersPage() {
 
   return (
     <AdminShell active="Users">
-      <Topbar eyebrow="User Management" error={error} title="Users" />
+      <Topbar
+        action={<a className="export-button" href="/api/export/users">Export Users</a>}
+        eyebrow="User Management"
+        error={error}
+        title="Users"
+      />
       <section className="panel">
         <div className="panel-header">
           <h3>Balances And Results</h3>

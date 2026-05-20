@@ -3,11 +3,29 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../config/db.js";
 import { calculateBetStats } from "../services/bets.js";
 import { getCorrectScoreAdmin, saveCorrectScoreOdds } from "../services/correctScore.js";
+import { csvResponse } from "../services/csv.js";
 import { syncConfiguredMatches } from "../services/matchSync.js";
 import { settleMatchManually } from "../services/settlement.js";
 import { formatSignedPoints, notifyTelegramUser } from "../services/telegramNotify.js";
 
 export async function registerAdminRoutes(app: FastifyInstance) {
+  app.get<{
+    Params: {
+      type: string;
+    };
+  }>("/admin/export/:type.csv", async (request, reply) => {
+    const exportData = await buildExport(request.params.type);
+
+    if (!exportData) {
+      return reply.code(404).send({ message: "Unknown export type" });
+    }
+
+    return reply
+      .header("content-type", "text/csv; charset=utf-8")
+      .header("content-disposition", `attachment; filename="${exportData.filename}"`)
+      .send(exportData.body);
+  });
+
   app.get("/admin/summary", async () => {
     const now = new Date();
     const fiveDaysLater = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
@@ -361,4 +379,102 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
     return { ok: true };
   });
+}
+
+async function buildExport(type: string) {
+  if (type === "users") {
+    const users = await prisma.telegramUser.findMany({
+      include: {
+        bets: true
+      },
+      orderBy: {
+        displayName: "asc"
+      }
+    });
+
+    return csvResponse(
+      "users.csv",
+      users.map((user) => {
+        const stats = calculateBetStats(user.bets);
+        return {
+          displayName: user.displayName || user.username || user.telegramId,
+          username: user.username,
+          telegramId: user.telegramId,
+          balance: user.pointsBalance.toNumber(),
+          totalBets: stats.totalBets,
+          pendingBets: stats.pending,
+          won: stats.won,
+          lost: stats.lost,
+          pushed: stats.pushed,
+          totalStake: stats.totalStake,
+          netWinLoss: stats.net,
+          createdAt: user.createdAt.toISOString()
+        };
+      })
+    );
+  }
+
+  if (type === "bets") {
+    const bets = await prisma.bet.findMany({
+      include: {
+        user: true,
+        match: true
+      },
+      orderBy: {
+        placedAt: "desc"
+      }
+    });
+
+    return csvResponse(
+      "bets.csv",
+      bets.map((bet) => ({
+        placedAt: bet.placedAt.toISOString(),
+        user: bet.user.displayName || bet.user.username || bet.user.telegramId,
+        username: bet.user.username,
+        telegramId: bet.user.telegramId,
+        match: `${bet.match.homeTeam} vs ${bet.match.awayTeam}`,
+        sport: bet.match.sportTitle || bet.match.sportKey,
+        market: bet.market,
+        selection: bet.selectionLabel,
+        odds: bet.odds.toNumber(),
+        stake: bet.stake.toNumber(),
+        potentialPayout: bet.potentialPayout.toNumber(),
+        status: bet.status,
+        settlementNote: bet.settlementNote,
+        settledAt: bet.settledAt?.toISOString() ?? "",
+        betId: bet.id
+      }))
+    );
+  }
+
+  if (type === "transactions") {
+    const transactions = await prisma.walletTransaction.findMany({
+      include: {
+        user: true
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
+
+    return csvResponse(
+      "transactions.csv",
+      transactions.map((transaction) => ({
+        createdAt: transaction.createdAt.toISOString(),
+        user: transaction.user.displayName || transaction.user.username || transaction.user.telegramId,
+        username: transaction.user.username,
+        telegramId: transaction.user.telegramId,
+        type: transaction.type,
+        source: transaction.source,
+        amount: transaction.amount.toNumber(),
+        balanceAfter: transaction.balanceAfter.toNumber(),
+        referenceType: transaction.referenceType,
+        referenceId: transaction.referenceId,
+        note: transaction.note,
+        transactionId: transaction.id
+      }))
+    );
+  }
+
+  return null;
 }

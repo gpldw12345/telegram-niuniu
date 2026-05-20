@@ -9,7 +9,12 @@ export default async function TransactionsPage() {
 
   return (
     <AdminShell active="Transactions">
-      <Topbar eyebrow="Point Ledger" error={error} title="Transactions" />
+      <Topbar
+        action={<a className="export-button" href="/api/export/transactions">Export Transactions</a>}
+        eyebrow="Point Ledger"
+        error={error}
+        title="Transactions"
+      />
       <section className="panel">
         <div className="panel-header">
           <h3>Recent Point Movements</h3>
