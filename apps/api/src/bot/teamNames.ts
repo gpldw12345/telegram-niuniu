@@ -38,8 +38,50 @@ const zhTeamNames: Record<string, string> = {
   Wales: "威尔士"
 };
 
+const teamFlags: Record<string, string> = {
+  Argentina: "🇦🇷",
+  Australia: "🇦🇺",
+  Belgium: "🇧🇪",
+  Brazil: "🇧🇷",
+  Canada: "🇨🇦",
+  Chile: "🇨🇱",
+  Colombia: "🇨🇴",
+  Croatia: "🇭🇷",
+  "Czech Republic": "🇨🇿",
+  Denmark: "🇩🇰",
+  Ecuador: "🇪🇨",
+  England: "🏴",
+  France: "🇫🇷",
+  Germany: "🇩🇪",
+  Ghana: "🇬🇭",
+  Iran: "🇮🇷",
+  Italy: "🇮🇹",
+  Japan: "🇯🇵",
+  Mexico: "🇲🇽",
+  Morocco: "🇲🇦",
+  Netherlands: "🇳🇱",
+  Panama: "🇵🇦",
+  Paraguay: "🇵🇾",
+  Poland: "🇵🇱",
+  Portugal: "🇵🇹",
+  Qatar: "🇶🇦",
+  Scotland: "🏴",
+  Senegal: "🇸🇳",
+  Serbia: "🇷🇸",
+  "South Africa": "🇿🇦",
+  "South Korea": "🇰🇷",
+  Spain: "🇪🇸",
+  Switzerland: "🇨🇭",
+  Tunisia: "🇹🇳",
+  Uruguay: "🇺🇾",
+  USA: "🇺🇸",
+  Wales: "🏴"
+};
+
 export function displayTeamName(name: string) {
   const zhName = zhTeamNames[name];
+  const flag = teamFlags[name];
+  const displayName = zhName ? `${name} (${zhName})` : name;
 
-  return zhName ? `${name} (${zhName})` : name;
+  return flag ? `${flag} ${displayName}` : displayName;
 }

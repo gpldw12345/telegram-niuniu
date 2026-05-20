@@ -7,6 +7,7 @@ import { csvResponse } from "../services/csv.js";
 import { syncConfiguredMatches } from "../services/matchSync.js";
 import { settleMatchManually } from "../services/settlement.js";
 import { formatSignedPoints, notifyBetLogGroup, notifyTelegramUser } from "../services/telegramNotify.js";
+import { displayTeamName } from "../bot/teamNames.js";
 
 export async function registerAdminRoutes(app: FastifyInstance) {
   app.get<{
@@ -122,7 +123,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         id: bet.id,
         userId: bet.userId,
         user: bet.user.displayName || bet.user.username || bet.user.telegramId,
-        match: `${bet.match.homeTeam} vs ${bet.match.awayTeam}`,
+        match: formatMatchName(bet.match.homeTeam, bet.match.awayTeam),
         market: bet.market,
         selection: bet.selectionLabel,
         stake: bet.stake.toNumber(),
@@ -143,7 +144,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       })),
       matches: matches.map((match) => ({
         id: match.id,
-        title: `${match.homeTeam} vs ${match.awayTeam}`,
+        title: formatMatchName(match.homeTeam, match.awayTeam),
         sportKey: match.sportKey,
         sportTitle: match.sportTitle,
         commenceTime: match.commenceTime.toISOString(),
@@ -406,7 +407,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       bet.user.telegramId,
       [
         "Bet cancelled",
-        `${bet.match.homeTeam} vs ${bet.match.awayTeam}`,
+        formatMatchName(bet.match.homeTeam, bet.match.awayTeam),
         bet.selectionLabel,
         `Refund: ${formatSignedPoints(bet.stake.toNumber())}`,
         `Balance: RM${refund.pointsBalance.toFixed(0)}`
@@ -417,7 +418,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       [
         "Bet cancelled by admin",
         `${bet.user.username ? `@${bet.user.username}` : bet.user.displayName || bet.user.telegramId}`,
-        `${bet.match.homeTeam} vs ${bet.match.awayTeam}`,
+        formatMatchName(bet.match.homeTeam, bet.match.awayTeam),
         bet.selectionLabel,
         `Refund: ${formatSignedPoints(bet.stake.toNumber())}`,
         `Balance: RM${refund.pointsBalance.toFixed(0)}`
@@ -480,7 +481,7 @@ async function buildExport(type: string) {
         user: bet.user.displayName || bet.user.username || bet.user.telegramId,
         username: bet.user.username,
         telegramId: bet.user.telegramId,
-        match: `${bet.match.homeTeam} vs ${bet.match.awayTeam}`,
+        match: formatMatchName(bet.match.homeTeam, bet.match.awayTeam),
         sport: bet.match.sportTitle || bet.match.sportKey,
         market: bet.market,
         selection: bet.selectionLabel,
@@ -525,4 +526,8 @@ async function buildExport(type: string) {
   }
 
   return null;
+}
+
+function formatMatchName(homeTeam: string, awayTeam: string) {
+  return `${displayTeamName(homeTeam)} vs ${displayTeamName(awayTeam)}`;
 }

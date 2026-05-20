@@ -1,5 +1,6 @@
 import { BetStatus, Prisma } from "@prisma/client";
 import { prisma } from "../config/db.js";
+import { displayTeamName } from "../bot/teamNames.js";
 
 type SettlementResult = {
   status: BetStatus;
@@ -104,7 +105,7 @@ export async function settleMatchManually(matchId: string, homeScore: number, aw
       settledBets += 1;
       notifications.push({
         telegramId: bet.user.telegramId,
-        matchTitle: `${match.homeTeam} vs ${match.awayTeam}`,
+        matchTitle: `${displayTeamName(match.homeTeam)} vs ${displayTeamName(match.awayTeam)}`,
         selection: bet.selectionLabel,
         stake: bet.stake.toNumber(),
         status: result.status,

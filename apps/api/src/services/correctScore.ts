@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/db.js";
 import type { BetSelection } from "../bot/betFlow.js";
+import { displayTeamName } from "../bot/teamNames.js";
 
 export function correctScoreKeys() {
   const keys: Array<{ key: string; label: string; home: number | null; away: number | null }> = [];
@@ -29,7 +30,11 @@ export async function getCorrectScoreAdmin(matchId: string) {
   });
 
   return {
-    match,
+    match: {
+      ...match,
+      homeTeam: displayTeamName(match.homeTeam),
+      awayTeam: displayTeamName(match.awayTeam)
+    },
     scores: correctScoreKeys().map((score) => {
       const offer = match.offers.find((candidate) => candidate.selectionKey === score.key);
       return {
