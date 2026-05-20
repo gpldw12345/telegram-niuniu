@@ -134,6 +134,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         displayName: user.displayName || user.username || user.telegramId,
         adminNote: user.adminNote,
         pointsBalance: user.pointsBalance.toNumber(),
+        maxBetAmount: user.maxBetAmount.toNumber(),
         stats: calculateBetStats(user.bets),
         createdAt: user.createdAt.toISOString()
       })),
@@ -365,20 +366,32 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     };
     Body: {
       note?: string;
+      maxBetAmount?: number;
     };
   }>("/admin/users/:id/note", async (request) => {
+    const maxBetAmount =
+      request.body.maxBetAmount === undefined || request.body.maxBetAmount === null
+        ? undefined
+        : new Prisma.Decimal(Number(request.body.maxBetAmount));
+
+    if (maxBetAmount !== undefined && (!maxBetAmount.isFinite() || maxBetAmount.lte(0))) {
+      throw new Error("maxBetAmount must be greater than zero");
+    }
+
     const user = await prisma.telegramUser.update({
       where: {
         id: request.params.id
       },
       data: {
-        adminNote: request.body.note || null
+        adminNote: request.body.note || null,
+        maxBetAmount
       }
     });
 
     return {
       id: user.id,
-      adminNote: user.adminNote
+      adminNote: user.adminNote,
+      maxBetAmount: user.maxBetAmount.toNumber()
     };
   });
 
@@ -509,6 +522,7 @@ async function buildExport(type: string) {
           telegramId: user.telegramId,
           adminNote: user.adminNote,
           balance: user.pointsBalance.toNumber(),
+          maxBet: user.maxBetAmount.toNumber(),
           totalBets: stats.totalBets,
           pendingBets: stats.pending,
           won: stats.won,

@@ -12,6 +12,7 @@ export type AdminSummary = {
     displayName: string;
     adminNote: string | null;
     pointsBalance: number;
+    maxBetAmount: number;
     stats: {
       totalBets: number;
       pending: number;

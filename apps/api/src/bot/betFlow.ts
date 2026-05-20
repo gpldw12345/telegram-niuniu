@@ -188,7 +188,10 @@ export function formatBetHeader(event: OddsApiEvent) {
   return [`${displayTeamName(event.home_team)} vs ${displayTeamName(event.away_team)}`, kickoff].join("\n");
 }
 
-export function formatBetSlip(pending: PendingBet, options: { currentBalance?: number } = {}) {
+export function formatBetSlip(
+  pending: PendingBet,
+  options: { currentBalance?: number; minBetAmount?: number; maxBetAmount?: number } = {}
+) {
   if (!pending.selection) {
     return "No selection yet.";
   }
@@ -197,7 +200,11 @@ export function formatBetSlip(pending: PendingBet, options: { currentBalance?: n
     ? `\nPotential return: ${formatCurrency(pending.stake * pending.selection.odds)}`
     : "";
   const currentBalance =
-    typeof options.currentBalance === "number" ? `Current balance: ${formatCurrency(options.currentBalance)}` : "";
+    typeof options.currentBalance === "number" ? `*Current balance: ${formatCurrency(options.currentBalance)}*` : "";
+  const betLimit =
+    typeof options.minBetAmount === "number" && typeof options.maxBetAmount === "number"
+      ? `_Min bet ${formatCurrency(options.minBetAmount)} / Max bet ${formatCurrency(options.maxBetAmount)}_`
+      : "";
 
   return [
     formatBetHeader(pending.event),
@@ -205,6 +212,7 @@ export function formatBetSlip(pending: PendingBet, options: { currentBalance?: n
     `Selection: ${pending.selection.label}`,
     pending.stake ? `Bet: ${formatCurrency(pending.stake)}` : "Bet: not selected",
     currentBalance,
+    betLimit,
     potentialPayout
   ]
     .filter(Boolean)

@@ -12,13 +12,14 @@ export async function POST(request: Request, context: RouteContext) {
   const formData = await request.formData();
   const { id } = await context.params;
   const note = String(formData.get("note") || "");
+  const maxBetAmount = Number(formData.get("maxBetAmount") || 1000);
 
   const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}/admin/users/${id}/note`, {
     method: "POST",
     headers: {
       "content-type": "application/json"
     },
-    body: JSON.stringify({ note })
+    body: JSON.stringify({ note, maxBetAmount })
   });
 
   if (!response.ok) {

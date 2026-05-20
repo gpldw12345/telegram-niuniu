@@ -21,7 +21,9 @@ import {
 import { displayTeamName } from "./teamNames.js";
 import { correctScoreRows, getCorrectScoreSelections } from "../services/correctScore.js";
 import { type BetHistoryFilter, getUserBetHistory, InsufficientPointsError, placeConfirmedBet } from "../services/bets.js";
-import { getTelegramUserBalance } from "../services/users.js";
+import { getTelegramUserBalance, getTelegramUserBetLimits } from "../services/users.js";
+
+const MIN_BET_AMOUNT = 15;
 
 export function createTelegramBot() {
   if (!env.TELEGRAM_BOT_TOKEN) {
@@ -232,7 +234,20 @@ export function createTelegramBot() {
       return;
     }
 
-    await ctx.reply(`${formatBetSlip(updated)}\n\nPlease type bet amount, for example 88.`);
+    const limits = await getTelegramUserBetLimits(ctx.from);
+
+    await ctx.reply(
+      [
+        formatBetSlip(updated, {
+          currentBalance: limits.balance.toNumber(),
+          minBetAmount: MIN_BET_AMOUNT,
+          maxBetAmount: limits.maxBetAmount.toNumber()
+        }),
+        "",
+        "Please type bet amount, for example 88."
+      ].join("\n"),
+      { parse_mode: "Markdown" }
+    );
   });
 
   bot.on("text", async (ctx, next) => {
@@ -243,8 +258,21 @@ export function createTelegramBot() {
 
     const stake = Number(ctx.message.text.trim());
 
+    const limits = await getTelegramUserBetLimits(ctx.from);
+    const maxBetAmount = limits.maxBetAmount.toNumber();
+
     if (!Number.isFinite(stake) || stake <= 0 || !Number.isInteger(stake)) {
       await ctx.reply("Please enter a whole number bet amount, for example 88.");
+      return;
+    }
+
+    if (stake < MIN_BET_AMOUNT) {
+      await ctx.reply(`Minimum bet is ${formatMoney(MIN_BET_AMOUNT)}.`);
+      return;
+    }
+
+    if (stake > maxBetAmount) {
+      await ctx.reply(`Maximum bet for your account is ${formatMoney(maxBetAmount)}.`);
       return;
     }
 
@@ -255,11 +283,13 @@ export function createTelegramBot() {
       return;
     }
 
-    const balance = await getTelegramUserBalance(ctx.from);
-
     await ctx.reply(
-      `${formatBetSlip(pending, { currentBalance: balance.toNumber() })}\n\nConfirm bet?`,
-      confirmKeyboard()
+      `${formatBetSlip(pending, {
+        currentBalance: limits.balance.toNumber(),
+        minBetAmount: MIN_BET_AMOUNT,
+        maxBetAmount
+      })}\n\nConfirm bet?`,
+      { ...confirmKeyboard(), parse_mode: "Markdown" }
     );
   });
 

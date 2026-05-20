@@ -143,6 +143,7 @@ export function UsersList({ users }: { users: AdminSummary["users"] }) {
         <strong>Name</strong>
         <strong>Username</strong>
         <strong>Balance</strong>
+        <strong>Max Bet</strong>
         <strong>Note</strong>
         <strong>Adjust</strong>
       </div>
@@ -162,8 +163,13 @@ export function UsersList({ users }: { users: AdminSummary["users"] }) {
               {user.stats.net >= 0 ? "+" : ""}{formatPoints(user.stats.net)}
             </span>
           </div>
+          <div>
+            <strong>{formatPoints(user.maxBetAmount)}</strong>
+            <span>Limit</span>
+          </div>
           <form className="note-form" action={`/api/users/${user.id}/note`} method="post">
             <input defaultValue={user.adminNote ?? ""} name="note" placeholder="Admin note" type="text" />
+            <input defaultValue={user.maxBetAmount} min="1" name="maxBetAmount" placeholder="Max bet" type="number" />
             <button type="submit">Save</button>
           </form>
           <form className="adjust-form" action={`/api/users/${user.id}/adjust-points`} method="post">

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../config/db.js";
 
 const STARTING_POINTS = new Prisma.Decimal(1000);
+const DEFAULT_MAX_BET_AMOUNT = new Prisma.Decimal(1000);
 
 export async function ensureTelegramUser(from: User) {
   const displayName = [from.first_name, from.last_name].filter(Boolean).join(" ");
@@ -18,6 +19,7 @@ export async function ensureTelegramUser(from: User) {
       lastName: from.last_name,
       displayName,
       pointsBalance: STARTING_POINTS,
+      maxBetAmount: DEFAULT_MAX_BET_AMOUNT,
       transactions: {
         create: {
           amount: STARTING_POINTS,
@@ -41,4 +43,13 @@ export async function getTelegramUserBalance(from: User) {
   const user = await ensureTelegramUser(from);
 
   return user.pointsBalance;
+}
+
+export async function getTelegramUserBetLimits(from: User) {
+  const user = await ensureTelegramUser(from);
+
+  return {
+    balance: user.pointsBalance,
+    maxBetAmount: user.maxBetAmount
+  };
 }

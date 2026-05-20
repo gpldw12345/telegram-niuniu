@@ -325,7 +325,7 @@ nav a:hover {
 
 .user-row {
   display: grid;
-  grid-template-columns: minmax(170px, 1fr) minmax(140px, 0.8fr) minmax(90px, 0.5fr) minmax(260px, 1fr) minmax(320px, 1.2fr);
+  grid-template-columns: minmax(170px, 1fr) minmax(140px, 0.8fr) minmax(90px, 0.5fr) minmax(90px, 0.5fr) minmax(300px, 1.2fr) minmax(320px, 1.2fr);
   gap: 14px;
   border-bottom: 1px solid var(--line);
   padding: 14px 18px;
@@ -530,7 +530,7 @@ tbody tr:last-child td {
 }
 
 .note-form {
-  grid-template-columns: minmax(150px, 1fr) auto;
+  grid-template-columns: minmax(150px, 1fr) 90px auto;
 }
 
 .adjust-form input,
