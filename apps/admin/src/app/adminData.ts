@@ -22,6 +22,7 @@ export type AdminSummary = {
   }>;
   bets: Array<{
     id: string;
+    userId: string;
     user: string;
     match: string;
     market: string;

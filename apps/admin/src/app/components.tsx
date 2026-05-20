@@ -94,6 +94,7 @@ export function BetsTable({ bets }: { bets: AdminSummary["bets"] }) {
             <th>Stake</th>
             <th>Return</th>
             <th>Status</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -106,6 +107,15 @@ export function BetsTable({ bets }: { bets: AdminSummary["bets"] }) {
               <td>{formatPoints(bet.stake)}</td>
               <td>{formatPoints(bet.potentialPayout)}</td>
               <td>{bet.status}</td>
+              <td>
+                {bet.status === "PENDING" ? (
+                  <form action={`/api/bets/${bet.id}/cancel`} method="post">
+                    <button className="danger-button" type="submit">Cancel</button>
+                  </form>
+                ) : (
+                  "-"
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -133,6 +143,12 @@ export function UsersList({ users }: { users: AdminSummary["users"] }) {
               {user.stats.net >= 0 ? "+" : ""}{formatPoints(user.stats.net)}
             </span>
           </div>
+          <form className="adjust-form" action={`/api/users/${user.id}/adjust-points`} method="post">
+            <input min="1" name="amount" placeholder="Points" type="number" />
+            <input name="note" placeholder="Note" type="text" />
+            <button name="direction" type="submit" value="add">Add</button>
+            <button className="danger-button" name="direction" type="submit" value="deduct">Deduct</button>
+          </form>
         </div>
       ))}
     </div>

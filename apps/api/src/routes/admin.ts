@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/db.js";
 import { calculateBetStats } from "../services/bets.js";
 import { syncConfiguredMatches } from "../services/matchSync.js";
@@ -98,6 +99,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       })),
       bets: bets.map((bet) => ({
         id: bet.id,
+        userId: bet.userId,
         user: bet.user.displayName || bet.user.username || bet.user.telegramId,
         match: `${bet.match.homeTeam} vs ${bet.match.awayTeam}`,
         market: bet.market,
@@ -185,5 +187,112 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     }
 
     return settleMatchManually(request.params.id, homeScore, awayScore);
+  });
+
+  app.post<{
+    Params: {
+      id: string;
+    };
+    Body: {
+      amount?: number;
+      note?: string;
+    };
+  }>("/admin/users/:id/adjust-points", async (request, reply) => {
+    const amount = new Prisma.Decimal(Number(request.body.amount));
+
+    if (!amount.isFinite() || amount.isZero()) {
+      return reply.code(400).send({ message: "amount is required" });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.telegramUser.update({
+        where: {
+          id: request.params.id
+        },
+        data: {
+          pointsBalance: {
+            increment: amount
+          }
+        }
+      });
+
+      await tx.walletTransaction.create({
+        data: {
+          userId: user.id,
+          amount,
+          balanceAfter: user.pointsBalance,
+          type: "ADMIN_ADJUSTMENT",
+          source: "ADMIN",
+          referenceType: "AdminAdjustment",
+          note: request.body.note || "Admin point adjustment"
+        }
+      });
+
+      return user;
+    });
+
+    return {
+      id: result.id,
+      pointsBalance: result.pointsBalance.toNumber()
+    };
+  });
+
+  app.post<{
+    Params: {
+      id: string;
+    };
+  }>("/admin/bets/:id/cancel", async (request, reply) => {
+    const bet = await prisma.bet.findUnique({
+      where: {
+        id: request.params.id
+      }
+    });
+
+    if (!bet) {
+      return reply.code(404).send({ message: "Bet not found" });
+    }
+
+    if (bet.status !== "PENDING") {
+      return reply.code(400).send({ message: "Only pending bets can be cancelled" });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const updatedUser = await tx.telegramUser.update({
+        where: {
+          id: bet.userId
+        },
+        data: {
+          pointsBalance: {
+            increment: bet.stake
+          }
+        }
+      });
+
+      await tx.bet.update({
+        where: {
+          id: bet.id
+        },
+        data: {
+          status: "VOID",
+          settlementNote: "Cancelled by admin. Stake refunded.",
+          settledAt: new Date()
+        }
+      });
+
+      await tx.walletTransaction.create({
+        data: {
+          userId: bet.userId,
+          amount: bet.stake,
+          balanceAfter: updatedUser.pointsBalance,
+          type: "BET_REFUND",
+          source: "ADMIN",
+          referenceType: "Bet",
+          referenceId: bet.id,
+          note: "Admin cancelled pending bet"
+        }
+      });
+    });
+
+    return { ok: true };
   });
 }
