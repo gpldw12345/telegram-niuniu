@@ -280,7 +280,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           type: "ADMIN_ADJUSTMENT",
           source: "ADMIN",
           referenceType: "AdminAdjustment",
-          note: request.body.note || "Admin point adjustment"
+          note: request.body.note || "Admin RM adjustment"
         }
       });
 
@@ -290,9 +290,9 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     await notifyTelegramUser(
       result.telegramId,
       [
-        "Points adjusted",
+        "Balance adjusted",
         `Amount: ${formatSignedPoints(amount.toNumber())}`,
-        `Balance: ${result.pointsBalance.toFixed(0)} points`,
+        `Balance: RM${result.pointsBalance.toFixed(0)}`,
         request.body.note ? `Note: ${request.body.note}` : ""
       ]
         .filter(Boolean)
@@ -301,10 +301,10 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
     await notifyBetLogGroup(
       [
-        amount.gt(0) ? "Points added by admin" : "Points deducted by admin",
+        amount.gt(0) ? "RM added by admin" : "RM deducted by admin",
         `${result.username ? `@${result.username}` : result.displayName || result.telegramId}`,
         `Amount: ${formatSignedPoints(amount.toNumber())}`,
-        `Balance: ${result.pointsBalance.toFixed(0)} points`,
+        `Balance: RM${result.pointsBalance.toFixed(0)}`,
         request.body.note ? `Note: ${request.body.note}` : ""
       ]
         .filter(Boolean)
@@ -381,7 +381,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         },
         data: {
           status: "VOID",
-          settlementNote: "Cancelled by admin. Stake refunded.",
+          settlementNote: "Cancelled by admin. Bet refunded.",
           settledAt: new Date()
         }
       });
@@ -409,7 +409,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         `${bet.match.homeTeam} vs ${bet.match.awayTeam}`,
         bet.selectionLabel,
         `Refund: ${formatSignedPoints(bet.stake.toNumber())}`,
-        `Balance: ${refund.pointsBalance.toFixed(0)} points`
+        `Balance: RM${refund.pointsBalance.toFixed(0)}`
       ].join("\n")
     );
 
@@ -420,7 +420,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         `${bet.match.homeTeam} vs ${bet.match.awayTeam}`,
         bet.selectionLabel,
         `Refund: ${formatSignedPoints(bet.stake.toNumber())}`,
-        `Balance: ${refund.pointsBalance.toFixed(0)} points`
+        `Balance: RM${refund.pointsBalance.toFixed(0)}`
       ].join("\n")
     );
 
@@ -454,7 +454,7 @@ async function buildExport(type: string) {
           won: stats.won,
           lost: stats.lost,
           pushed: stats.pushed,
-          totalStake: stats.totalStake,
+          totalBet: stats.totalStake,
           netWinLoss: stats.net,
           createdAt: user.createdAt.toISOString()
         };
@@ -485,7 +485,7 @@ async function buildExport(type: string) {
         market: bet.market,
         selection: bet.selectionLabel,
         odds: bet.odds.toNumber(),
-        stake: bet.stake.toNumber(),
+        betAmount: bet.stake.toNumber(),
         potentialPayout: bet.potentialPayout.toNumber(),
         status: bet.status,
         settlementNote: bet.settlementNote,

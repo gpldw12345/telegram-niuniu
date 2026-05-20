@@ -28,5 +28,6 @@ export async function notifyBetLogGroup(message: string) {
 }
 
 export function formatSignedPoints(amount: number) {
-  return `${amount >= 0 ? "+" : ""}${Math.round(amount).toLocaleString()} points`;
+  const prefix = amount >= 0 ? "+RM" : "-RM";
+  return `${prefix}${Math.round(Math.abs(amount))}`;
 }

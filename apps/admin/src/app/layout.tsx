@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Niuniu Admin",
-  description: "Admin dashboard for World Cup play-points betting"
+  description: "Admin dashboard for World Cup betting"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

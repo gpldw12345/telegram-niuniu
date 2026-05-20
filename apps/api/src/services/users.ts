@@ -24,7 +24,7 @@ export async function ensureTelegramUser(from: User) {
           balanceAfter: STARTING_POINTS,
           type: "CREDIT",
           source: "SYSTEM",
-          note: "Starting play-points"
+          note: "Starting RM balance"
         }
       }
     },

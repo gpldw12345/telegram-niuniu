@@ -49,7 +49,7 @@ export function createTelegramBot() {
     }
 
     await ctx.reply(
-      "Welcome to World Cup Niuniu.\n\nUse the group match buttons to place play-points bets.",
+      "Welcome to World Cup Niuniu.\n\nUse the group match buttons to place bets.",
       Markup.keyboard([["Balance", "My Bets"]]).resize()
     );
   });
@@ -138,7 +138,7 @@ export function createTelegramBot() {
 
   bot.hears("Balance", async (ctx) => {
     const balance = await getTelegramUserBalance(ctx.from);
-    await ctx.reply(`Balance: ${balance.toFixed(0)} points`);
+    await ctx.reply(`Balance: ${formatMoney(balance.toNumber())}`);
   });
 
   bot.hears("My Bets", async (ctx) => {
@@ -239,7 +239,7 @@ export function createTelegramBot() {
       return;
     }
 
-    await ctx.reply(`${formatBetSlip(updated)}\n\nPlease type stake amount, for example 88.`);
+    await ctx.reply(`${formatBetSlip(updated)}\n\nPlease type bet amount, for example 88.`);
   });
 
   bot.on("text", async (ctx, next) => {
@@ -251,7 +251,7 @@ export function createTelegramBot() {
     const stake = Number(ctx.message.text.trim());
 
     if (!Number.isFinite(stake) || stake <= 0 || !Number.isInteger(stake)) {
-      await ctx.reply("Please enter a whole number stake, for example 88.");
+      await ctx.reply("Please enter a whole number bet amount, for example 88.");
       return;
     }
 
@@ -310,7 +310,7 @@ export function createTelegramBot() {
       return;
     } catch (error) {
       if (error instanceof InsufficientPointsError) {
-        await ctx.reply("Not enough points for this stake. Please choose a smaller stake.");
+        await ctx.reply("Not enough balance for this bet. Please choose a smaller amount.");
         return;
       }
 
@@ -331,7 +331,7 @@ export function createTelegramBot() {
 
   bot.command("balance", async (ctx) => {
     const balance = await getTelegramUserBalance(ctx.from);
-    await ctx.reply(`Balance: ${balance.toFixed(0)} points`);
+    await ctx.reply(`Balance: ${formatMoney(balance.toNumber())}`);
   });
 
   bot.command("mybets", async (ctx) => {
@@ -379,8 +379,8 @@ function formatUserStats(stats: {
     "Bet History",
     `W-L-P: ${formatStat(stats.won)}-${formatStat(stats.lost)}-${formatStat(stats.pushed)}`,
     `Pending: ${stats.pending}`,
-    `Total stake: ${stats.totalStake.toFixed(0)}`,
-    `Net: ${stats.net >= 0 ? "+" : ""}${stats.net.toFixed(0)} points`
+    `Total bet: ${formatMoney(stats.totalStake)}`,
+    `Net: ${formatSignedMoney(stats.net)}`
   ].join("\n");
 }
 
@@ -388,9 +388,17 @@ function formatBetHistoryLine(
   bet: Awaited<ReturnType<typeof getUserBetHistory>>["bets"][number],
   index: number
 ) {
-  return `${index + 1}. ${displayTeamName(bet.match.homeTeam)} vs ${displayTeamName(bet.match.awayTeam)}
+return `${index + 1}. ${displayTeamName(bet.match.homeTeam)} vs ${displayTeamName(bet.match.awayTeam)}
 ${bet.selectionLabel}
-Stake: ${bet.stake.toFixed(0)} | Status: ${bet.status}`;
+Bet: ${formatMoney(bet.stake.toNumber())} | Status: ${bet.status}`;
+}
+
+function formatMoney(value: number) {
+  return `${value < 0 ? "-" : ""}RM${Math.round(Math.abs(value))}`;
+}
+
+function formatSignedMoney(value: number) {
+  return `${value >= 0 ? "+" : ""}${formatMoney(value)}`;
 }
 
 function formatStat(value: number) {

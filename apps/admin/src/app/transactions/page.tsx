@@ -11,13 +11,13 @@ export default async function TransactionsPage() {
     <AdminShell active="Transactions">
       <Topbar
         action={<a className="export-button" href="/api/export/transactions">Export Transactions</a>}
-        eyebrow="Point Ledger"
+        eyebrow="RM Ledger"
         error={error}
         title="Transactions"
       />
       <section className="panel">
         <div className="panel-header">
-          <h3>Recent Point Movements</h3>
+          <h3>Recent RM Movements</h3>
         </div>
         {data.transactions.length === 0 ? (
           <div className="empty-state">No transactions yet.</div>

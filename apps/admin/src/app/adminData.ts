@@ -124,7 +124,7 @@ export async function getCorrectScore(matchId: string) {
 }
 
 export function formatPoints(value: number) {
-  return Math.round(value).toLocaleString();
+  return `${value < 0 ? "-" : ""}RM${Math.round(Math.abs(value))}`;
 }
 
 export function formatStat(value: number) {

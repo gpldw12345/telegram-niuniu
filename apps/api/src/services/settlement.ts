@@ -162,7 +162,7 @@ function calculateBetSettlement(input: {
   return {
     status: "VOID",
     credit: input.stake,
-    note: "Market not supported for settlement yet. Stake refunded."
+    note: "Market not supported for settlement yet. Bet refunded."
   };
 }
 
@@ -200,7 +200,7 @@ function settleOverUnder(input: {
     return {
       status: "VOID",
       credit: input.stake,
-      note: "Over/Under bet missing line. Stake refunded."
+      note: "Over/Under bet missing line. Bet refunded."
     };
   }
 
@@ -260,7 +260,7 @@ function settleAsianHandicap(input: {
     return {
       status: "VOID",
       credit: input.stake,
-      note: "Asian Handicap bet missing team or line. Stake refunded."
+      note: "Asian Handicap bet missing team or line. Bet refunded."
     };
   }
 

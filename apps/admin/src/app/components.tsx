@@ -99,7 +99,7 @@ export function BetsTable({ bets }: { bets: AdminSummary["bets"] }) {
             <th>Match</th>
             <th>Market</th>
             <th>Selection</th>
-            <th>Stake</th>
+            <th>Bet</th>
             <th>Return</th>
             <th>Status</th>
             <th>Action</th>
@@ -142,7 +142,7 @@ export function UsersList({ users }: { users: AdminSummary["users"] }) {
       <div className="user-row user-row-head">
         <strong>Name</strong>
         <strong>Username</strong>
-        <strong>Points</strong>
+        <strong>Balance</strong>
         <strong>Note</strong>
         <strong>Adjust</strong>
       </div>
@@ -167,7 +167,7 @@ export function UsersList({ users }: { users: AdminSummary["users"] }) {
             <button type="submit">Save</button>
           </form>
           <form className="adjust-form" action={`/api/users/${user.id}/adjust-points`} method="post">
-            <input min="1" name="amount" placeholder="Points" type="number" />
+            <input min="1" name="amount" placeholder="RM" type="number" />
             <input name="note" placeholder="Reason" type="text" />
             <button name="direction" type="submit" value="add">Add</button>
             <button className="danger-button" name="direction" type="submit" value="deduct">Deduct</button>

@@ -1,16 +1,16 @@
 # Telegram Niuniu World Cup Bot
 
-Play-points Telegram betting bot for World Cup matches.
+Telegram betting bot for World Cup matches.
 
 ## Agreed MVP
 
-- Play-points only, no real-money wallet.
+- Displayed as RM balance only, no real-money wallet.
 - Markets: `1X2`, `Asian Handicap`, `Correct Score`.
 - Betting windows: pre-match and half-time.
 - Half-time bets settle against final full-time score.
 - Asian Handicap shows up to 3 lines per match.
 - Correct Score odds start as admin-managed/manual odds.
-- Admin site manages users, points, matches, odds, bets, and settlement.
+- Admin site manages users, balances, matches, odds, bets, and settlement.
 - Development can use mock odds until real World Cup data is available.
 
 ## Project Layout
