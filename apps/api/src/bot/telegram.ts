@@ -287,6 +287,21 @@ export function createTelegramBot() {
           `Balance after bet: ${placed.balanceAfter.toFixed(0)} points`
         ].join("\n")
       );
+
+      if (env.TELEGRAM_BET_LOG_CHAT_ID) {
+        await ctx.telegram
+          .sendMessage(
+            env.TELEGRAM_BET_LOG_CHAT_ID,
+            [
+              `${formatUserMention(ctx.from)} bet`,
+              formatBetHeader(confirmed.event),
+              confirmed.selection.label,
+              `Stake: ${confirmed.stake} points`,
+              `Balance: ${placed.balanceAfter.toFixed(0)} points`
+            ].join("\n")
+          )
+          .catch(() => undefined);
+      }
       return;
     } catch (error) {
       if (error instanceof InsufficientPointsError) {
@@ -375,4 +390,12 @@ Stake: ${bet.stake.toFixed(0)} | Status: ${bet.status}`;
 
 function formatStat(value: number) {
   return Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1);
+}
+
+function formatUserMention(user: { username?: string; first_name?: string; last_name?: string }) {
+  if (user.username) {
+    return `@${user.username}`;
+  }
+
+  return [user.first_name, user.last_name].filter(Boolean).join(" ") || "User";
 }

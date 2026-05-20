@@ -14,6 +14,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_GROUP_CHAT_ID: z.string().optional(),
+  TELEGRAM_BET_LOG_CHAT_ID: z.string().optional(),
   TELEGRAM_BOT_USERNAME: z.string().optional(),
   ODDS_PROVIDER: z.enum(["mock", "odds-api"]).default("mock"),
   ODDS_API_KEY: z.string().optional(),
