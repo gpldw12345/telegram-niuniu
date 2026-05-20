@@ -9,6 +9,7 @@ export type AdminSummary = {
     id: string;
     username: string | null;
     displayName: string;
+    adminNote: string | null;
     pointsBalance: number;
     stats: {
       totalBets: number;

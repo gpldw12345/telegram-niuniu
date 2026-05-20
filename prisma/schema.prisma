@@ -72,6 +72,7 @@ model TelegramUser {
   firstName      String?
   lastName       String?
   displayName    String?
+  adminNote      String?
   pointsBalance  Decimal             @default(0) @db.Decimal(18, 2)
   isBlocked      Boolean             @default(false)
   createdAt      DateTime            @default(now())

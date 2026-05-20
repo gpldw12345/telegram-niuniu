@@ -113,6 +113,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         telegramId: user.telegramId,
         username: user.username,
         displayName: user.displayName || user.username || user.telegramId,
+        adminNote: user.adminNote,
         pointsBalance: user.pointsBalance.toNumber(),
         stats: calculateBetStats(user.bets),
         createdAt: user.createdAt.toISOString()
@@ -308,6 +309,29 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     Params: {
       id: string;
     };
+    Body: {
+      note?: string;
+    };
+  }>("/admin/users/:id/note", async (request) => {
+    const user = await prisma.telegramUser.update({
+      where: {
+        id: request.params.id
+      },
+      data: {
+        adminNote: request.body.note || null
+      }
+    });
+
+    return {
+      id: user.id,
+      adminNote: user.adminNote
+    };
+  });
+
+  app.post<{
+    Params: {
+      id: string;
+    };
   }>("/admin/bets/:id/cancel", async (request, reply) => {
     const bet = await prisma.bet.findUnique({
       where: {
@@ -400,6 +424,7 @@ async function buildExport(type: string) {
           displayName: user.displayName || user.username || user.telegramId,
           username: user.username,
           telegramId: user.telegramId,
+          adminNote: user.adminNote,
           balance: user.pointsBalance.toNumber(),
           totalBets: stats.totalBets,
           pendingBets: stats.pending,

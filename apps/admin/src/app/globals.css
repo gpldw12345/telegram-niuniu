@@ -273,10 +273,15 @@ nav a:hover {
 
 .user-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(320px, 1fr);
+  grid-template-columns: minmax(170px, 1fr) minmax(140px, 0.8fr) minmax(90px, 0.5fr) minmax(260px, 1fr) minmax(320px, 1.2fr);
   gap: 14px;
   border-bottom: 1px solid var(--line);
   padding: 14px 18px;
+}
+
+.user-row-head {
+  background: var(--surface-2);
+  color: var(--muted);
 }
 
 .user-row:last-child {
@@ -288,7 +293,7 @@ nav a:hover {
   gap: 5px;
 }
 
-.user-row div:last-child {
+.user-row > div:nth-child(3) {
   text-align: right;
 }
 
@@ -433,13 +438,22 @@ tbody tr:last-child td {
   font-weight: 700;
 }
 
-.adjust-form {
+.adjust-form,
+.note-form {
   display: grid;
-  grid-template-columns: 90px minmax(120px, 1fr) auto auto;
   gap: 8px;
 }
 
-.adjust-form input {
+.adjust-form {
+  grid-template-columns: 90px minmax(120px, 1fr) auto auto;
+}
+
+.note-form {
+  grid-template-columns: minmax(150px, 1fr) auto;
+}
+
+.adjust-form input,
+.note-form input {
   min-height: 34px;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -468,6 +482,10 @@ tbody tr:last-child td {
 
   .user-row,
   .adjust-form {
+    grid-template-columns: 1fr;
+  }
+
+  .note-form {
     grid-template-columns: 1fr;
   }
 }

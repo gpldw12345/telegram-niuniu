@@ -139,6 +139,13 @@ export function UsersList({ users }: { users: AdminSummary["users"] }) {
 
   return (
     <div className="user-list">
+      <div className="user-row user-row-head">
+        <strong>Name</strong>
+        <strong>Username</strong>
+        <strong>Points</strong>
+        <strong>Note</strong>
+        <strong>Adjust</strong>
+      </div>
       {users.map((user) => (
         <div className="user-row" key={user.id}>
           <div>
@@ -146,14 +153,22 @@ export function UsersList({ users }: { users: AdminSummary["users"] }) {
             <span>W-L-P {formatStat(user.stats.won)}-{formatStat(user.stats.lost)}-{formatStat(user.stats.pushed)}</span>
           </div>
           <div>
+            <strong>{user.username ? `@${user.username}` : "-"}</strong>
+            <span>ID {user.id.slice(0, 8)}</span>
+          </div>
+          <div>
             <strong>{formatPoints(user.pointsBalance)}</strong>
             <span className={user.stats.net >= 0 ? "net-positive" : "net-negative"}>
               {user.stats.net >= 0 ? "+" : ""}{formatPoints(user.stats.net)}
             </span>
           </div>
+          <form className="note-form" action={`/api/users/${user.id}/note`} method="post">
+            <input defaultValue={user.adminNote ?? ""} name="note" placeholder="Admin note" type="text" />
+            <button type="submit">Save</button>
+          </form>
           <form className="adjust-form" action={`/api/users/${user.id}/adjust-points`} method="post">
             <input min="1" name="amount" placeholder="Points" type="number" />
-            <input name="note" placeholder="Note" type="text" />
+            <input name="note" placeholder="Reason" type="text" />
             <button name="direction" type="submit" value="add">Add</button>
             <button className="danger-button" name="direction" type="submit" value="deduct">Deduct</button>
           </form>
