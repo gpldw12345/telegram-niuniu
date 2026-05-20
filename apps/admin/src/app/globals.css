@@ -117,6 +117,12 @@ nav a:hover {
   color: white;
 }
 
+.panel-link {
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .content {
   min-width: 0;
   padding: 28px;

@@ -8,7 +8,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
   app.get("/admin/summary", async () => {
     const now = new Date();
     const fiveDaysLater = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
-    const [totalUsers, pendingBets, postEnabledMatches, users, bets, matches, exposureAggregate] =
+    const [totalUsers, pendingBets, postEnabledMatches, users, bets, matches, transactions, exposureAggregate] =
       await Promise.all([
         prisma.telegramUser.count(),
         prisma.bet.count({
@@ -61,6 +61,15 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           },
           take: 50
         }),
+        prisma.walletTransaction.findMany({
+          include: {
+            user: true
+          },
+          orderBy: {
+            createdAt: "desc"
+          },
+          take: 50
+        }),
         prisma.bet.aggregate({
           where: {
             status: "PENDING"
@@ -98,6 +107,16 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         potentialPayout: bet.potentialPayout.toNumber(),
         status: bet.status,
         placedAt: bet.placedAt.toISOString()
+      })),
+      transactions: transactions.map((transaction) => ({
+        id: transaction.id,
+        user: transaction.user.displayName || transaction.user.username || transaction.user.telegramId,
+        amount: transaction.amount.toNumber(),
+        balanceAfter: transaction.balanceAfter.toNumber(),
+        type: transaction.type,
+        source: transaction.source,
+        note: transaction.note,
+        createdAt: transaction.createdAt.toISOString()
       })),
       matches: matches.map((match) => ({
         id: match.id,
