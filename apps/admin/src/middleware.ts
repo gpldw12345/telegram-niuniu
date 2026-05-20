@@ -16,7 +16,11 @@ export async function middleware(request: NextRequest) {
   const isAuthed = await verifyAdminToken(request.cookies.get(adminCookieName)?.value);
 
   if (!isAuthed) {
-    const loginUrl = request.nextUrl.clone();
+    const forwardedHost = request.headers.get("x-forwarded-host");
+    const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+    const loginUrl = forwardedHost
+      ? new URL("/login", `${forwardedProto}://${forwardedHost}`)
+      : request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
