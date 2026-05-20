@@ -27,6 +27,9 @@ export function AdminShell({
             </a>
           ))}
         </nav>
+        <form action="/api/logout" method="post">
+          <button className="logout-button" type="submit">Logout</button>
+        </form>
       </aside>
       <section className="content">{children}</section>
     </main>
