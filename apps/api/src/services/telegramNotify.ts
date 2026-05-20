@@ -15,6 +15,18 @@ export async function notifyTelegramUser(telegramId: string, message: string) {
   }
 }
 
+export async function notifyBetLogGroup(message: string) {
+  if (!bot || !env.TELEGRAM_BET_LOG_CHAT_ID) {
+    return;
+  }
+
+  try {
+    await bot.telegram.sendMessage(env.TELEGRAM_BET_LOG_CHAT_ID, message);
+  } catch {
+    // Group may not be configured or bot may not have access.
+  }
+}
+
 export function formatSignedPoints(amount: number) {
   return `${amount >= 0 ? "+" : ""}${Math.round(amount).toLocaleString()} points`;
 }

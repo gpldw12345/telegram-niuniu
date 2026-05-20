@@ -6,7 +6,7 @@ import { getCorrectScoreAdmin, saveCorrectScoreOdds } from "../services/correctS
 import { csvResponse } from "../services/csv.js";
 import { syncConfiguredMatches } from "../services/matchSync.js";
 import { settleMatchManually } from "../services/settlement.js";
-import { formatSignedPoints, notifyTelegramUser } from "../services/telegramNotify.js";
+import { formatSignedPoints, notifyBetLogGroup, notifyTelegramUser } from "../services/telegramNotify.js";
 
 export async function registerAdminRoutes(app: FastifyInstance) {
   app.get<{
@@ -299,6 +299,18 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         .join("\n")
     );
 
+    await notifyBetLogGroup(
+      [
+        amount.gt(0) ? "Points added by admin" : "Points deducted by admin",
+        `${result.username ? `@${result.username}` : result.displayName || result.telegramId}`,
+        `Amount: ${formatSignedPoints(amount.toNumber())}`,
+        `Balance: ${result.pointsBalance.toFixed(0)} points`,
+        request.body.note ? `Note: ${request.body.note}` : ""
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
+
     return {
       id: result.id,
       pointsBalance: result.pointsBalance.toNumber()
@@ -394,6 +406,17 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       bet.user.telegramId,
       [
         "Bet cancelled",
+        `${bet.match.homeTeam} vs ${bet.match.awayTeam}`,
+        bet.selectionLabel,
+        `Refund: ${formatSignedPoints(bet.stake.toNumber())}`,
+        `Balance: ${refund.pointsBalance.toFixed(0)} points`
+      ].join("\n")
+    );
+
+    await notifyBetLogGroup(
+      [
+        "Bet cancelled by admin",
+        `${bet.user.username ? `@${bet.user.username}` : bet.user.displayName || bet.user.telegramId}`,
         `${bet.match.homeTeam} vs ${bet.match.awayTeam}`,
         bet.selectionLabel,
         `Refund: ${formatSignedPoints(bet.stake.toNumber())}`,
