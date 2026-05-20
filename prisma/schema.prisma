@@ -243,3 +243,9 @@ model AuditLog {
   @@index([actorAdminId, createdAt])
   @@index([entityType, entityId])
 }
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

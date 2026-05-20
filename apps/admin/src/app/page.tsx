@@ -1,6 +1,6 @@
 import { AdminShell } from "./AdminShell";
 import { BetsTable, MatchesTable, Topbar } from "./components";
-import { formatPoints, getSummary } from "./adminData";
+import { formatDate, formatDateTimeInput, formatPoints, getSummary } from "./adminData";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +24,28 @@ export default async function DashboardPage() {
             <strong>{metric.value}</strong>
           </article>
         ))}
+      </section>
+
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <h3>Report Period</h3>
+            <span>
+              Counting from {data.metrics.reportPeriodStart ? formatDate(data.metrics.reportPeriodStart) : "all time"}
+            </span>
+          </div>
+        </div>
+        <form className="period-form" action="/api/report-period" method="post">
+          <label>
+            Start calculating from
+            <input
+              defaultValue={formatDateTimeInput(data.metrics.reportPeriodStart)}
+              name="reportPeriodStart"
+              type="datetime-local"
+            />
+          </label>
+          <button type="submit">Save Period</button>
+        </form>
       </section>
 
       <section className="panel">

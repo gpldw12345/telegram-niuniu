@@ -8,6 +8,7 @@ import { syncConfiguredMatches } from "../services/matchSync.js";
 import { settleMatchManually } from "../services/settlement.js";
 import { formatSignedPoints, notifyBetLogGroup, notifyTelegramUser } from "../services/telegramNotify.js";
 import { displayTeamName } from "../bot/teamNames.js";
+import { getReportPeriodStart, setReportPeriodStart } from "../services/reportPeriod.js";
 
 export async function registerAdminRoutes(app: FastifyInstance) {
   app.get<{
@@ -30,12 +31,28 @@ export async function registerAdminRoutes(app: FastifyInstance) {
   app.get("/admin/summary", async () => {
     const now = new Date();
     const fiveDaysLater = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+    const reportPeriodStart = await getReportPeriodStart();
+    const periodBetWhere = reportPeriodStart
+      ? {
+          placedAt: {
+            gte: reportPeriodStart
+          }
+        }
+      : {};
+    const periodTransactionWhere = reportPeriodStart
+      ? {
+          createdAt: {
+            gte: reportPeriodStart
+          }
+        }
+      : {};
     const [totalUsers, pendingBets, postEnabledMatches, users, bets, matches, transactions, allBets] =
       await Promise.all([
         prisma.telegramUser.count(),
         prisma.bet.count({
           where: {
-            status: "PENDING"
+            status: "PENDING",
+            ...periodBetWhere
           }
         }),
         prisma.match.count({
@@ -46,7 +63,9 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         }),
         prisma.telegramUser.findMany({
           include: {
-            bets: true
+            bets: {
+              where: periodBetWhere
+            }
           },
           orderBy: {
             pointsBalance: "desc"
@@ -54,6 +73,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           take: 8
         }),
         prisma.bet.findMany({
+          where: periodBetWhere,
           include: {
             user: true,
             match: true
@@ -84,6 +104,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           take: 50
         }),
         prisma.walletTransaction.findMany({
+          where: periodTransactionWhere,
           include: {
             user: true
           },
@@ -92,7 +113,9 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           },
           take: 50
         }),
-        prisma.bet.findMany()
+        prisma.bet.findMany({
+          where: periodBetWhere
+        })
       ]);
     const companyProfitLoss = -calculateBetStats(allBets).net;
 
@@ -101,7 +124,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         openMatches: postEnabledMatches,
         pendingBets,
         totalUsers,
-        profitLoss: companyProfitLoss
+        profitLoss: companyProfitLoss,
+        reportPeriodStart: reportPeriodStart?.toISOString() ?? null
       },
       users: users.map((user) => ({
         id: user.id,
@@ -150,6 +174,29 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         pendingBets: match.bets.length,
         openWindows: match.windows.filter((window) => window.status === "OPEN").length
       }))
+    };
+  });
+
+  app.post<{
+    Body: {
+      reportPeriodStart?: string;
+    };
+  }>("/admin/report-period", async (request, reply) => {
+    const value = request.body.reportPeriodStart;
+
+    if (!value) {
+      return reply.code(400).send({ message: "reportPeriodStart is required" });
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return reply.code(400).send({ message: "reportPeriodStart must be a valid date" });
+    }
+
+    await setReportPeriodStart(date);
+    return {
+      reportPeriodStart: date.toISOString()
     };
   });
 
@@ -424,10 +471,28 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 }
 
 async function buildExport(type: string) {
+  const reportPeriodStart = await getReportPeriodStart();
+  const periodBetWhere = reportPeriodStart
+    ? {
+        placedAt: {
+          gte: reportPeriodStart
+        }
+      }
+    : {};
+  const periodTransactionWhere = reportPeriodStart
+    ? {
+        createdAt: {
+          gte: reportPeriodStart
+        }
+      }
+    : {};
+
   if (type === "users") {
     const users = await prisma.telegramUser.findMany({
       include: {
-        bets: true
+        bets: {
+          where: periodBetWhere
+        }
       },
       orderBy: {
         displayName: "asc"
@@ -459,6 +524,7 @@ async function buildExport(type: string) {
 
   if (type === "bets") {
     const bets = await prisma.bet.findMany({
+      where: periodBetWhere,
       include: {
         user: true,
         match: true
@@ -492,6 +558,7 @@ async function buildExport(type: string) {
 
   if (type === "transactions") {
     const transactions = await prisma.walletTransaction.findMany({
+      where: periodTransactionWhere,
       include: {
         user: true
       },

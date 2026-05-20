@@ -4,6 +4,7 @@ export type AdminSummary = {
     pendingBets: number;
     totalUsers: number;
     profitLoss: number;
+    reportPeriodStart: string | null;
   };
   users: Array<{
     id: string;
@@ -65,7 +66,8 @@ const emptySummary: AdminSummary = {
     openMatches: 0,
     pendingBets: 0,
     totalUsers: 0,
-    profitLoss: 0
+    profitLoss: 0,
+    reportPeriodStart: null
   },
   users: [],
   bets: [],
@@ -138,4 +140,20 @@ export function formatDate(value: string) {
     timeStyle: "short",
     timeZone: "Asia/Kuala_Lumpur"
   }).format(new Date(value));
+}
+
+export function formatDateTimeInput(value: string | null) {
+  const date = value ? new Date(value) : new Date();
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Kuala_Lumpur"
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((candidate) => candidate.type === type)?.value ?? "00";
+
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
 }
