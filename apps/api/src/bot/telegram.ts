@@ -1,4 +1,4 @@
-import { Markup, Telegraf } from "telegraf";
+import { Markup, Telegraf, type Context } from "telegraf";
 import { env } from "../config/env.js";
 import { formatOddsApiGroupMatchPost } from "./messages.js";
 import { getPostEnabledMatches, syncConfiguredMatches } from "../services/matchSync.js";
@@ -20,7 +20,7 @@ import {
 } from "./betFlow.js";
 import { displayTeamName } from "./teamNames.js";
 import { correctScoreRows, getCorrectScoreSelections } from "../services/correctScore.js";
-import { getUserBetHistory, InsufficientPointsError, placeConfirmedBet } from "../services/bets.js";
+import { type BetHistoryFilter, getUserBetHistory, InsufficientPointsError, placeConfirmedBet } from "../services/bets.js";
 import { getTelegramUserBalance } from "../services/users.js";
 
 export function createTelegramBot() {
@@ -142,16 +142,13 @@ export function createTelegramBot() {
   });
 
   bot.hears("My Bets", async (ctx) => {
-    const { bets, stats } = await getUserBetHistory(ctx.from);
+    await ctx.reply("Choose bet list:", betHistoryKeyboard());
+  });
 
-    if (bets.length === 0) {
-      await ctx.reply("No bets yet.");
-      return;
-    }
-
-    await ctx.reply(
-      [formatUserStats(stats), "", ...bets.map(formatBetHistoryLine)].join("\n\n")
-    );
+  bot.action(/^bets:(running|upcoming|settled)$/, async (ctx) => {
+    const filter = ctx.match[1] as BetHistoryFilter;
+    await ctx.answerCbQuery();
+    await sendBetHistory(ctx, filter);
   });
 
   bot.action(/^bet:market:(1x2|ah|ou|cs)$/, async (ctx) => {
@@ -331,25 +328,11 @@ export function createTelegramBot() {
   });
 
   bot.command("mybets", async (ctx) => {
-    const { bets, stats } = await getUserBetHistory(ctx.from);
-
-    if (bets.length === 0) {
-      await ctx.reply("No bets yet.");
-      return;
-    }
-
-    await ctx.reply([formatUserStats(stats), "", ...bets.map(formatBetHistoryLine)].join("\n\n"));
+    await ctx.reply("Choose bet list:", betHistoryKeyboard());
   });
 
   bot.command("history", async (ctx) => {
-    const { bets, stats } = await getUserBetHistory(ctx.from);
-
-    if (bets.length === 0) {
-      await ctx.reply("No bets yet.");
-      return;
-    }
-
-    await ctx.reply([formatUserStats(stats), "", ...bets.map(formatBetHistoryLine)].join("\n\n"));
+    await ctx.reply("Choose bet list:", betHistoryKeyboard());
   });
 
   bot.catch((error, ctx) => {
@@ -360,6 +343,49 @@ export function createTelegramBot() {
   });
 
   return bot;
+}
+
+async function sendBetHistory(ctx: Context, filter: BetHistoryFilter) {
+  if (!ctx.from) {
+    await ctx.reply("I could not read your Telegram user.");
+    return;
+  }
+
+  const { bets, stats } = await getUserBetHistory(ctx.from, filter);
+  const title = betHistoryTitle(filter);
+
+  if (bets.length === 0) {
+    await ctx.reply(`No ${title.toLowerCase()} bets.`);
+    return;
+  }
+
+  await ctx.reply([title, formatUserStats(stats), "", ...bets.map(formatBetHistoryLine)].join("\n\n"));
+}
+
+function betHistoryKeyboard() {
+  return Markup.inlineKeyboard([
+    [
+      Markup.button.callback("Running", "bets:running"),
+      Markup.button.callback("Upcoming", "bets:upcoming"),
+      Markup.button.callback("Settled", "bets:settled")
+    ]
+  ]);
+}
+
+function betHistoryTitle(filter: BetHistoryFilter) {
+  if (filter === "running") {
+    return "Running Bets";
+  }
+
+  if (filter === "upcoming") {
+    return "Upcoming Bets";
+  }
+
+  if (filter === "settled") {
+    return "Settled Bets";
+  }
+
+  return "Bet History";
 }
 
 function formatUserStats(stats: {
@@ -384,9 +410,11 @@ function formatBetHistoryLine(
   bet: Awaited<ReturnType<typeof getUserBetHistory>>["bets"][number],
   index: number
 ) {
-return `${index + 1}. ${displayTeamName(bet.match.homeTeam)} vs ${displayTeamName(bet.match.awayTeam)}
+  return `${index + 1}. ${displayTeamName(bet.match.homeTeam)} vs ${displayTeamName(bet.match.awayTeam)}
+${formatKickoff(bet.match.commenceTime)}
 ${bet.selectionLabel}
-Bet: ${formatMoney(bet.stake.toNumber())} | Status: ${bet.status}`;
+Bet: ${formatMoney(bet.stake.toNumber())} | Odds: ${bet.odds.toFixed(2).replace(/\.00$/, "")}
+Status: ${formatBetStatus(bet.status)}`;
 }
 
 function formatMoney(value: number) {
@@ -395,6 +423,18 @@ function formatMoney(value: number) {
 
 function formatSignedMoney(value: number) {
   return `${value >= 0 ? "+" : ""}${formatMoney(value)}`;
+}
+
+function formatKickoff(value: Date) {
+  return new Intl.DateTimeFormat("en-MY", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Kuala_Lumpur"
+  }).format(value);
+}
+
+function formatBetStatus(status: string) {
+  return status.replace(/_/g, " ");
 }
 
 function correctScoreKeyboardRows(selections: Awaited<ReturnType<typeof getCorrectScoreSelections>>) {

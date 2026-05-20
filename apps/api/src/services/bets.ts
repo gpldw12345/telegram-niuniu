@@ -142,19 +142,55 @@ export async function getRecentBets(from: User) {
   });
 }
 
-export async function getUserBetHistory(from: User) {
+export type BetHistoryFilter = "all" | "running" | "upcoming" | "settled";
+
+export async function getUserBetHistory(from: User, filter: BetHistoryFilter = "all") {
   const user = await ensureTelegramUser(from);
+  const now = new Date();
+  const where: Prisma.BetWhereInput = { userId: user.id };
+
+  if (filter === "running") {
+    where.status = "PENDING";
+    where.match = {
+      commenceTime: {
+        lte: now
+      },
+      status: {
+        notIn: ["FINISHED", "CANCELLED"]
+      }
+    };
+  } else if (filter === "upcoming") {
+    where.status = "PENDING";
+    where.match = {
+      commenceTime: {
+        gt: now
+      }
+    };
+  } else if (filter === "settled") {
+    where.status = {
+      not: "PENDING"
+    };
+  }
   const bets = await prisma.bet.findMany({
-    where: {
-      userId: user.id
-    },
+    where,
     include: {
       match: true
     },
-    orderBy: {
-      placedAt: "desc"
-    },
-    take: 10
+    orderBy:
+      filter === "upcoming"
+        ? {
+            match: {
+              commenceTime: "asc"
+            }
+          }
+        : filter === "settled"
+          ? {
+              settledAt: "desc"
+            }
+          : {
+              placedAt: "desc"
+            },
+    take: 20
   });
   const allBets = await prisma.bet.findMany({
     where: {
