@@ -43,7 +43,7 @@ export function createTelegramBot() {
       }
 
       beginBet(ctx.from.id, event);
-      await ctx.reply([formatBetHeader(event), "", "Choose market:"].join("\n"), marketKeyboard());
+      await ctx.reply([formatBetHeader(event), "", "Choose market:"].join("\n"), marketKeyboard(event));
       return;
     }
 
@@ -153,13 +153,13 @@ export function createTelegramBot() {
     );
   });
 
-  bot.action(/^bet:market:(1x2|ah|cs)$/, async (ctx) => {
+  bot.action(/^bet:market:(1x2|ah|ou|cs)$/, async (ctx) => {
     const market = ctx.match[1];
     const pending = getPendingBet(ctx.from.id);
 
     await ctx.answerCbQuery();
 
-    if (market !== "1x2" && market !== "ah" && market !== "cs") {
+    if (market !== "1x2" && market !== "ah" && market !== "ou" && market !== "cs") {
       await ctx.reply("Unknown market.");
       return;
     }
@@ -184,14 +184,14 @@ export function createTelegramBot() {
     await ctx.reply(`Choose selection:\n\n${formatBetHeader(pending.event)}`, keyboard);
   });
 
-  bot.action(/^bet:selection:(1x2|ah):(\d+)$/, async (ctx) => {
+  bot.action(/^bet:selection:(1x2|ah|ou):(\d+)$/, async (ctx) => {
     const market = ctx.match[1];
     const index = Number(ctx.match[2]);
     const pending = getPendingBet(ctx.from.id);
 
     await ctx.answerCbQuery();
 
-    if (market !== "1x2" && market !== "ah") {
+    if (market !== "1x2" && market !== "ah" && market !== "ou") {
       await ctx.reply("Unknown market.");
       return;
     }

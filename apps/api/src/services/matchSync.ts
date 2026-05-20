@@ -119,10 +119,15 @@ function buildMarketOffers(
   matchId: string,
   windowId: string
 ): Prisma.MarketOfferCreateManyInput[] {
-  return [...getSelections(event, "1x2"), ...getSelections(event, "ah")].map((selection) => ({
+  return [...getSelections(event, "1x2"), ...getSelections(event, "ah"), ...getSelections(event, "ou")].map((selection) => ({
     matchId,
     windowId,
-    market: selection.market === "1x2" ? "ONE_X_TWO" : "ASIAN_HANDICAP",
+    market:
+      selection.market === "1x2"
+        ? "ONE_X_TWO"
+        : selection.market === "ah"
+          ? "ASIAN_HANDICAP"
+          : "OVER_UNDER",
     selectionKey: selection.selectionKey,
     selectionLabel: selection.label,
     teamSide: selection.teamSide,

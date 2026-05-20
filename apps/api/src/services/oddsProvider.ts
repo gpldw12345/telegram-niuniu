@@ -3,7 +3,7 @@ import { getMockWorldCupOdds } from "./mockOdds.js";
 import type { OddsApiEvent } from "./oddsApi.js";
 import { oddsApiClient } from "./oddsApi.js";
 
-const defaultExtraSports = ["soccer_epl"];
+const defaultExtraSports = ["soccer_epl", "basketball_nba"];
 
 export async function getConfiguredWorldCupOdds() {
   if (env.ODDS_PROVIDER === "mock") {
@@ -15,7 +15,7 @@ export async function getConfiguredWorldCupOdds() {
 
   return {
     provider: "odds-api" as const,
-    events: await oddsApiClient.getWorldCupOdds(["h2h", "spreads"])
+    events: await oddsApiClient.getWorldCupOdds(["h2h", "spreads", "totals"])
   };
 }
 
@@ -34,7 +34,7 @@ export async function getConfiguredOddsForSports() {
       try {
         return {
           sportKey,
-          events: await oddsApiClient.getOddsForSport(sportKey, ["h2h", "spreads"]),
+          events: await oddsApiClient.getOddsForSport(sportKey, ["h2h", "spreads", "totals"]),
           error: null
         };
       } catch (error) {

@@ -81,7 +81,12 @@ export async function placeConfirmedBet(from: User, confirmed: ConfirmedBet) {
         userId: freshUser.id,
         matchId: match.id,
         windowId: window.id,
-        market: confirmed.selection.market === "1x2" ? "ONE_X_TWO" : "ASIAN_HANDICAP",
+        market:
+          confirmed.selection.market === "1x2"
+            ? "ONE_X_TWO"
+            : confirmed.selection.market === "ah"
+              ? "ASIAN_HANDICAP"
+              : "OVER_UNDER",
         selectionKey: confirmed.selection.selectionKey,
         selectionLabel: confirmed.selection.label,
         teamSide: confirmed.selection.teamSide,

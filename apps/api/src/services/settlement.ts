@@ -126,10 +126,52 @@ function calculateBetSettlement(input: {
     return settleAsianHandicap(input);
   }
 
+  if (input.market === "OVER_UNDER") {
+    return settleOverUnder(input);
+  }
+
   return {
     status: "VOID",
     credit: input.stake,
     note: "Market not supported for settlement yet. Stake refunded."
+  };
+}
+
+function settleOverUnder(input: {
+  teamSide: string | null;
+  handicap: Prisma.Decimal | null;
+  odds: Prisma.Decimal;
+  stake: Prisma.Decimal;
+  homeScore: number;
+  awayScore: number;
+}): SettlementResult {
+  if (!input.teamSide || input.handicap === null) {
+    return {
+      status: "VOID",
+      credit: input.stake,
+      note: "Over/Under bet missing line. Stake refunded."
+    };
+  }
+
+  const totalScore = input.homeScore + input.awayScore;
+  const totalLine = input.handicap.toNumber();
+  const didWin =
+    (input.teamSide === "OVER" && totalScore > totalLine) ||
+    (input.teamSide === "UNDER" && totalScore < totalLine);
+  const didPush = totalScore === totalLine;
+
+  if (didPush) {
+    return {
+      status: "PUSHED",
+      credit: input.stake,
+      note: `O/U ${formatHandicap(totalLine)} pushed. Final total ${totalScore}.`
+    };
+  }
+
+  return {
+    status: didWin ? "WON" : "LOST",
+    credit: didWin ? input.stake.mul(input.odds) : new Prisma.Decimal(0),
+    note: `O/U ${formatHandicap(totalLine)} ${input.teamSide}. Final total ${totalScore}.`
   };
 }
 

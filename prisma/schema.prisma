@@ -29,6 +29,7 @@ enum BetWindowStatus {
 enum MarketType {
   ONE_X_TWO
   ASIAN_HANDICAP
+  OVER_UNDER
   CORRECT_SCORE
 }
 

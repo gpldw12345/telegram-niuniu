@@ -6,6 +6,8 @@ import { settleMatchManually } from "../services/settlement.js";
 
 export async function registerAdminRoutes(app: FastifyInstance) {
   app.get("/admin/summary", async () => {
+    const now = new Date();
+    const fiveDaysLater = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
     const [totalUsers, pendingBets, postEnabledMatches, users, bets, matches, exposureAggregate] =
       await Promise.all([
         prisma.telegramUser.count(),
@@ -40,6 +42,12 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           take: 10
         }),
         prisma.match.findMany({
+          where: {
+            commenceTime: {
+              gte: now,
+              lte: fiveDaysLater
+            }
+          },
           include: {
             bets: {
               where: {

@@ -3,7 +3,7 @@ import type { InlineKeyboardMarkup } from "telegraf/types";
 import type { OddsApiEvent } from "../services/oddsApi.js";
 import { displayTeamName } from "./teamNames.js";
 
-type Market = "1x2" | "ah";
+type Market = "1x2" | "ah" | "ou";
 
 type BetSelection = {
   market: Market;
@@ -96,12 +96,19 @@ export function isAwaitingStake(userId: number) {
   return pendingBets.get(userId)?.awaitingStake ?? false;
 }
 
-export function marketKeyboard(): Markup.Markup<InlineKeyboardMarkup> {
-  return Markup.inlineKeyboard([
-    [Markup.button.callback("1X2", "bet:market:1x2")],
+export function marketKeyboard(event?: OddsApiEvent): Markup.Markup<InlineKeyboardMarkup> {
+  const isBasketball = event?.sport_key.startsWith("basketball_");
+  const buttons = [
+    [Markup.button.callback(isBasketball ? "Moneyline" : "1X2", "bet:market:1x2")],
     [Markup.button.callback("Asian Handicap", "bet:market:ah")],
-    [Markup.button.callback("Correct Score", "bet:market:cs")]
-  ]);
+    [Markup.button.callback("Over / Under", "bet:market:ou")]
+  ];
+
+  if (!isBasketball) {
+    buttons.push([Markup.button.callback("Correct Score", "bet:market:cs")]);
+  }
+
+  return Markup.inlineKeyboard(buttons);
 }
 
 export function selectionKeyboard(event: OddsApiEvent, market: Market) {
@@ -137,11 +144,11 @@ export function getSelections(event: OddsApiEvent, market: Market): BetSelection
       return [];
     }
 
-    return [
-      event.home_team,
-      "Draw",
-      event.away_team
-    ].flatMap((name) => {
+    const names = event.sport_key.startsWith("basketball_")
+      ? [event.home_team, event.away_team]
+      : [event.home_team, "Draw", event.away_team];
+
+    return names.flatMap((name) => {
       const outcome = h2h.outcomes.find((candidate) => candidate.name === name);
 
       if (!outcome) {
@@ -158,7 +165,11 @@ export function getSelections(event: OddsApiEvent, market: Market): BetSelection
     });
   }
 
-  return pickAsianHandicapSelections(event);
+  if (market === "ah") {
+    return pickAsianHandicapSelections(event);
+  }
+
+  return pickOverUnderSelections(event);
 }
 
 export function formatBetHeader(event: OddsApiEvent) {
@@ -244,6 +255,61 @@ function pickAsianHandicapSelections(event: OddsApiEvent): BetSelection[] {
 
   return [...lines.entries()]
     .sort(([left], [right]) => Math.abs(Number(left)) - Math.abs(Number(right)))
+    .slice(0, 3)
+    .flatMap(([, selections]) => selections);
+}
+
+function pickOverUnderSelections(event: OddsApiEvent): BetSelection[] {
+  const lines = new Map<string, BetSelection[]>();
+
+  for (const bookmaker of event.bookmakers ?? []) {
+    const totals = bookmaker.markets.find((market) => market.key === "totals");
+
+    if (!totals) {
+      continue;
+    }
+
+    const overOutcomes = totals.outcomes.filter(
+      (outcome) => outcome.name === "Over" && outcome.point !== undefined
+    );
+    const underOutcomes = totals.outcomes.filter(
+      (outcome) => outcome.name === "Under" && outcome.point !== undefined
+    );
+
+    for (const over of overOutcomes) {
+      const under = underOutcomes.find((candidate) => candidate.point === over.point);
+
+      if (!under || over.point === undefined || under.point === undefined) {
+        continue;
+      }
+
+      const key = over.point.toFixed(2);
+
+      if (!lines.has(key)) {
+        lines.set(key, [
+          {
+            market: "ou",
+            label: `Over ${formatPoint(over.point)} @ ${formatOdds(over.price)}`,
+            selectionKey: `OVER:${over.point}`,
+            teamSide: "OVER",
+            odds: over.price,
+            handicap: over.point
+          },
+          {
+            market: "ou",
+            label: `Under ${formatPoint(under.point)} @ ${formatOdds(under.price)}`,
+            selectionKey: `UNDER:${under.point}`,
+            teamSide: "UNDER",
+            odds: under.price,
+            handicap: under.point
+          }
+        ]);
+      }
+    }
+  }
+
+  return [...lines.entries()]
+    .sort(([left], [right]) => Number(left) - Number(right))
     .slice(0, 3)
     .flatMap(([, selections]) => selections);
 }

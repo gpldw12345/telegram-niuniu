@@ -37,19 +37,24 @@ export function formatOddsApiGroupMatchPost(event: OddsApiEvent) {
   const awayOdd = h2h?.outcomes.find((outcome) => outcome.name === event.away_team);
   const drawOdd = h2h?.outcomes.find((outcome) => outcome.name === "Draw");
   const handicapLines = pickAsianHandicapLines(event);
+  const totalLines = pickOverUnderLines(event);
+  const isBasketball = event.sport_key.startsWith("basketball_");
 
   return [
     `${displayTeamName(event.home_team)} vs ${displayTeamName(event.away_team)}`,
     kickoff,
     "",
-    "1X2",
+    isBasketball ? "Moneyline" : "1X2",
     `${displayTeamName(event.home_team)}: ${formatOdds(homeOdd?.price)}`,
-    `Draw: ${formatOdds(drawOdd?.price)}`,
+    isBasketball ? "" : `Draw: ${formatOdds(drawOdd?.price)}`,
     `${displayTeamName(event.away_team)}: ${formatOdds(awayOdd?.price)}`,
     "",
     "Asian Handicap",
-    ...formatHandicapLines(handicapLines, event.home_team, event.away_team)
-  ].join("\n");
+    ...formatHandicapLines(handicapLines, event.home_team, event.away_team),
+    "",
+    "Over / Under",
+    ...formatTotalLines(totalLines)
+  ].filter((line) => line !== "").join("\n");
 }
 
 type HandicapLine = {
@@ -57,6 +62,12 @@ type HandicapLine = {
   homePrice: number;
   awayPoint: number;
   awayPrice: number;
+};
+
+type TotalLine = {
+  point: number;
+  overPrice: number;
+  underPrice: number;
 };
 
 function pickBookmakerWithH2h(event: OddsApiEvent) {
@@ -109,6 +120,41 @@ function pickAsianHandicapLines(event: OddsApiEvent): HandicapLine[] {
     .slice(0, 3);
 }
 
+function pickOverUnderLines(event: OddsApiEvent): TotalLine[] {
+  const lines = new Map<string, TotalLine>();
+
+  for (const bookmaker of event.bookmakers ?? []) {
+    const totals = bookmaker.markets.find((market) => market.key === "totals");
+
+    if (!totals) {
+      continue;
+    }
+
+    const overs = totals.outcomes.filter((outcome) => outcome.name === "Over" && outcome.point !== undefined);
+    const unders = totals.outcomes.filter((outcome) => outcome.name === "Under" && outcome.point !== undefined);
+
+    for (const over of overs) {
+      const under = unders.find((candidate) => candidate.point === over.point);
+
+      if (!under || over.point === undefined || under.point === undefined) {
+        continue;
+      }
+
+      const key = over.point.toFixed(2);
+
+      if (!lines.has(key)) {
+        lines.set(key, {
+          point: over.point,
+          overPrice: over.price,
+          underPrice: under.price
+        });
+      }
+    }
+  }
+
+  return [...lines.values()].sort((left, right) => left.point - right.point).slice(0, 3);
+}
+
 function formatHandicapLines(lines: HandicapLine[], homeTeam: string, awayTeam: string) {
   if (lines.length === 0) {
     return ["No AH odds available yet"];
@@ -117,6 +163,17 @@ function formatHandicapLines(lines: HandicapLine[], homeTeam: string, awayTeam: 
   return lines.map(
     (line) =>
       `${displayTeamName(homeTeam)} ${formatPoint(line.homePoint)} @ ${formatOdds(line.homePrice)} | ${displayTeamName(awayTeam)} ${formatPoint(line.awayPoint)} @ ${formatOdds(line.awayPrice)}`
+  );
+}
+
+function formatTotalLines(lines: TotalLine[]) {
+  if (lines.length === 0) {
+    return ["No O/U odds available yet"];
+  }
+
+  return lines.map(
+    (line) =>
+      `Over ${formatPoint(line.point)} @ ${formatOdds(line.overPrice)} | Under ${formatPoint(line.point)} @ ${formatOdds(line.underPrice)}`
   );
 }
 
