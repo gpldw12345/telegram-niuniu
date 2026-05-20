@@ -201,6 +201,11 @@ nav a:hover {
   padding: 16px 18px;
 }
 
+.panel-footer {
+  border-top: 1px solid var(--line);
+  padding: 16px 18px;
+}
+
 .empty-state {
   display: grid;
   min-height: 230px;
@@ -377,6 +382,44 @@ tbody tr:last-child td {
 
 .danger-button {
   background: #b42318;
+}
+
+.small-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border-radius: 6px;
+  padding: 0 10px;
+  background: var(--surface-2);
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.cs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 10px;
+  padding: 18px;
+}
+
+.cs-field {
+  display: grid;
+  gap: 6px;
+}
+
+.cs-field label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cs-field input {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 10px;
+  font-weight: 700;
 }
 
 .adjust-form {

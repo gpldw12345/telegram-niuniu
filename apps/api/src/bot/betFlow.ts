@@ -3,15 +3,17 @@ import type { InlineKeyboardMarkup } from "telegraf/types";
 import type { OddsApiEvent } from "../services/oddsApi.js";
 import { displayTeamName } from "./teamNames.js";
 
-type Market = "1x2" | "ah" | "ou";
+export type Market = "1x2" | "ah" | "ou" | "cs";
 
-type BetSelection = {
+export type BetSelection = {
   market: Market;
   label: string;
   odds: number;
   selectionKey: string;
   teamSide?: string;
   handicap?: number;
+  correctHomeScore?: number;
+  correctAwayScore?: number;
 };
 
 type PendingBet = {
@@ -169,7 +171,11 @@ export function getSelections(event: OddsApiEvent, market: Market): BetSelection
     return pickAsianHandicapSelections(event);
   }
 
-  return pickOverUnderSelections(event);
+  if (market === "ou") {
+    return pickOverUnderSelections(event);
+  }
+
+  return [];
 }
 
 export function formatBetHeader(event: OddsApiEvent) {

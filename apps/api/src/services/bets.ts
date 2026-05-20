@@ -86,7 +86,9 @@ export async function placeConfirmedBet(from: User, confirmed: ConfirmedBet) {
             ? "ONE_X_TWO"
             : confirmed.selection.market === "ah"
               ? "ASIAN_HANDICAP"
-              : "OVER_UNDER",
+              : confirmed.selection.market === "ou"
+                ? "OVER_UNDER"
+                : "CORRECT_SCORE",
         selectionKey: confirmed.selection.selectionKey,
         selectionLabel: confirmed.selection.label,
         teamSide: confirmed.selection.teamSide,
@@ -94,6 +96,8 @@ export async function placeConfirmedBet(from: User, confirmed: ConfirmedBet) {
           confirmed.selection.handicap === undefined
             ? undefined
             : new Prisma.Decimal(confirmed.selection.handicap),
+        correctHomeScore: confirmed.selection.correctHomeScore,
+        correctAwayScore: confirmed.selection.correctAwayScore,
         odds,
         stake,
         potentialPayout,

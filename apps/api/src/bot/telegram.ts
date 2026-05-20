@@ -19,6 +19,7 @@ import {
   isAwaitingStake
 } from "./betFlow.js";
 import { displayTeamName } from "./teamNames.js";
+import { getCorrectScoreSelections } from "../services/correctScore.js";
 import { getUserBetHistory, InsufficientPointsError, placeConfirmedBet } from "../services/bets.js";
 import { getTelegramUserBalance } from "../services/users.js";
 
@@ -170,7 +171,26 @@ export function createTelegramBot() {
     }
 
     if (market === "cs") {
-      await ctx.reply("Correct Score will be added after the admin odds screen is ready.");
+      if (pending.event.sport_key.startsWith("basketball_")) {
+        await ctx.reply("Correct Score is only available for soccer.");
+        return;
+      }
+
+      const selections = await getCorrectScoreSelections(pending.event.id);
+
+      if (selections.length === 0) {
+        await ctx.reply("Correct Score odds are not available for this match yet.");
+        return;
+      }
+
+      await ctx.reply(
+        `Choose correct score:\n\n${formatBetHeader(pending.event)}`,
+        Markup.inlineKeyboard(
+          selections.map((selection, index) => [
+            Markup.button.callback(selection.label, `bet:selection:cs:${index}`)
+          ])
+        )
+      );
       return;
     }
 
@@ -184,14 +204,14 @@ export function createTelegramBot() {
     await ctx.reply(`Choose selection:\n\n${formatBetHeader(pending.event)}`, keyboard);
   });
 
-  bot.action(/^bet:selection:(1x2|ah|ou):(\d+)$/, async (ctx) => {
+  bot.action(/^bet:selection:(1x2|ah|ou|cs):(\d+)$/, async (ctx) => {
     const market = ctx.match[1];
     const index = Number(ctx.match[2]);
     const pending = getPendingBet(ctx.from.id);
 
     await ctx.answerCbQuery();
 
-    if (market !== "1x2" && market !== "ah" && market !== "ou") {
+    if (market !== "1x2" && market !== "ah" && market !== "ou" && market !== "cs") {
       await ctx.reply("Unknown market.");
       return;
     }
@@ -201,7 +221,11 @@ export function createTelegramBot() {
       return;
     }
 
-    const selection = getSelections(pending.event, market)[index];
+    const selections =
+      market === "cs"
+        ? await getCorrectScoreSelections(pending.event.id)
+        : getSelections(pending.event, market);
+    const selection = selections[index];
 
     if (!selection) {
       await ctx.reply("This selection is no longer available. Please start again.");

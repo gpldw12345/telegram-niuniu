@@ -51,6 +51,9 @@ export async function settleMatchManually(matchId: string, homeScore: number, aw
         market: bet.market,
         teamSide: bet.teamSide,
         handicap: bet.handicap,
+        selectionKey: bet.selectionKey,
+        correctHomeScore: bet.correctHomeScore,
+        correctAwayScore: bet.correctAwayScore,
         odds: bet.odds,
         stake: bet.stake,
         homeScore,
@@ -132,6 +135,9 @@ function calculateBetSettlement(input: {
   market: string;
   teamSide: string | null;
   handicap: Prisma.Decimal | null;
+  selectionKey: string;
+  correctHomeScore: number | null;
+  correctAwayScore: number | null;
   odds: Prisma.Decimal;
   stake: Prisma.Decimal;
   homeScore: number;
@@ -149,10 +155,36 @@ function calculateBetSettlement(input: {
     return settleOverUnder(input);
   }
 
+  if (input.market === "CORRECT_SCORE") {
+    return settleCorrectScore(input);
+  }
+
   return {
     status: "VOID",
     credit: input.stake,
     note: "Market not supported for settlement yet. Stake refunded."
+  };
+}
+
+function settleCorrectScore(input: {
+  selectionKey: string;
+  correctHomeScore: number | null;
+  correctAwayScore: number | null;
+  odds: Prisma.Decimal;
+  stake: Prisma.Decimal;
+  homeScore: number;
+  awayScore: number;
+}): SettlementResult {
+  const isListedScore = input.homeScore <= 4 && input.awayScore <= 4;
+  const didWin =
+    input.selectionKey === "OTHER"
+      ? !isListedScore
+      : input.correctHomeScore === input.homeScore && input.correctAwayScore === input.awayScore;
+
+  return {
+    status: didWin ? "WON" : "LOST",
+    credit: didWin ? input.stake.mul(input.odds) : new Prisma.Decimal(0),
+    note: `Correct Score final ${input.homeScore}-${input.awayScore}.`
   };
 }
 

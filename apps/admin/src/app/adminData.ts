@@ -97,6 +97,31 @@ export async function getSummary() {
   }
 }
 
+export async function getCorrectScore(matchId: string) {
+  const apiBaseUrl = process.env.API_BASE_URL || "http://localhost:4000";
+  const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}/admin/matches/${matchId}/correct-score`);
+
+  if (!response.ok) {
+    throw new Error("Could not load correct score odds");
+  }
+
+  return response.json() as Promise<{
+    match: {
+      id: string;
+      homeTeam: string;
+      awayTeam: string;
+      sportKey: string;
+    };
+    scores: Array<{
+      key: string;
+      label: string;
+      home: number | null;
+      away: number | null;
+      odds: number | "";
+    }>;
+  }>;
+}
+
 export function formatPoints(value: number) {
   return Math.round(value).toLocaleString();
 }

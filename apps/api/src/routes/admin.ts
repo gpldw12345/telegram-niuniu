@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/db.js";
 import { calculateBetStats } from "../services/bets.js";
+import { getCorrectScoreAdmin, saveCorrectScoreOdds } from "../services/correctScore.js";
 import { syncConfiguredMatches } from "../services/matchSync.js";
 import { settleMatchManually } from "../services/settlement.js";
 import { formatSignedPoints, notifyTelegramUser } from "../services/telegramNotify.js";
@@ -139,6 +140,23 @@ export async function registerAdminRoutes(app: FastifyInstance) {
   });
 
   app.post("/admin/sync-matches", async () => syncConfiguredMatches());
+
+  app.get<{
+    Params: {
+      id: string;
+    };
+  }>("/admin/matches/:id/correct-score", async (request) => getCorrectScoreAdmin(request.params.id));
+
+  app.post<{
+    Params: {
+      id: string;
+    };
+    Body: {
+      odds?: Record<string, number>;
+    };
+  }>("/admin/matches/:id/correct-score", async (request) =>
+    saveCorrectScoreOdds(request.params.id, request.body.odds ?? {})
+  );
 
   app.patch<{
     Params: {

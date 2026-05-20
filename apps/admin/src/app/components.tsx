@@ -40,6 +40,7 @@ export function MatchesTable({ matches }: { matches: AdminSummary["matches"] }) 
             <th>League</th>
             <th>Kickoff</th>
             <th>Post</th>
+            <th>CS</th>
             <th>Settle</th>
             <th>Status</th>
             <th>Pending</th>
@@ -58,6 +59,13 @@ export function MatchesTable({ matches }: { matches: AdminSummary["matches"] }) 
                     {match.isPostEnabled ? "Ticked" : "Tick"}
                   </button>
                 </form>
+              </td>
+              <td>
+                {match.sportKey.startsWith("soccer_") ? (
+                  <a className="small-action" href={`/matches/${match.id}/correct-score`}>CS</a>
+                ) : (
+                  "-"
+                )}
               </td>
               <td>
                 <form className="score-form" action={`/api/matches/${match.id}/settle`} method="post">
