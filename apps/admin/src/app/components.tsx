@@ -68,12 +68,19 @@ export function MatchesTable({ matches }: { matches: AdminSummary["matches"] }) 
                 )}
               </td>
               <td>
-                <form className="score-form" action={`/api/matches/${match.id}/settle`} method="post">
-                  <input defaultValue={match.homeScore ?? ""} min="0" name="homeScore" placeholder="H" type="number" />
-                  <span>-</span>
-                  <input defaultValue={match.awayScore ?? ""} min="0" name="awayScore" placeholder="A" type="number" />
-                  <button className="settle-button" type="submit">Settle</button>
-                </form>
+                <div className="settle-actions">
+                  <form className="score-form" action={`/api/matches/${match.id}/settle`} method="post">
+                    <input defaultValue={match.homeScore ?? ""} min="0" name="homeScore" placeholder="H" type="number" />
+                    <span>-</span>
+                    <input defaultValue={match.awayScore ?? ""} min="0" name="awayScore" placeholder="A" type="number" />
+                    <button className="settle-button" type="submit">Settle</button>
+                  </form>
+                  {match.status === "FINISHED" ? (
+                    <form action={`/api/matches/${match.id}/revoke-settlement`} method="post">
+                      <button className="danger-button" type="submit">Revoke</button>
+                    </form>
+                  ) : null}
+                </div>
               </td>
               <td>{match.status}</td>
               <td>{match.pendingBets}</td>

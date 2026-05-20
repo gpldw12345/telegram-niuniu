@@ -507,6 +507,15 @@ tbody tr:last-child td {
   padding: 18px;
 }
 
+.period-revoke-form {
+  padding: 0 18px 18px;
+}
+
+.settle-actions {
+  display: grid;
+  gap: 8px;
+}
+
 .period-form label {
   display: grid;
   gap: 6px;

@@ -46,6 +46,9 @@ export default async function DashboardPage() {
           </label>
           <button type="submit">Save Period</button>
         </form>
+        <form className="period-revoke-form" action="/api/report-period/revoke" method="post">
+          <button className="danger-button" type="submit">Revoke Last Period Save</button>
+        </form>
       </section>
 
       <section className="panel">

@@ -5,10 +5,10 @@ import { calculateBetStats } from "../services/bets.js";
 import { getCorrectScoreAdmin, saveCorrectScoreOdds } from "../services/correctScore.js";
 import { csvResponse } from "../services/csv.js";
 import { syncConfiguredMatches } from "../services/matchSync.js";
-import { settleMatchManually } from "../services/settlement.js";
+import { revokeMatchSettlement, settleMatchManually } from "../services/settlement.js";
 import { formatSignedPoints, notifyBetLogGroup, notifyTelegramUser } from "../services/telegramNotify.js";
 import { displayTeamName } from "../bot/teamNames.js";
-import { getReportPeriodStart, setReportPeriodStart } from "../services/reportPeriod.js";
+import { getReportPeriodStart, revokeReportPeriodStart, setReportPeriodStart } from "../services/reportPeriod.js";
 
 export async function registerAdminRoutes(app: FastifyInstance) {
   app.get<{
@@ -201,6 +201,14 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     };
   });
 
+  app.post("/admin/report-period/revoke", async () => {
+    const reportPeriodStart = await revokeReportPeriodStart();
+
+    return {
+      reportPeriodStart: reportPeriodStart?.toISOString() ?? null
+    };
+  });
+
   app.post("/admin/sync-matches", async () => syncConfiguredMatches());
 
   app.get<{
@@ -281,6 +289,25 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             `Credit: ${formatSignedPoints(notification.credit)}`,
             notification.note
           ].join("\n")
+        )
+      )
+    );
+
+    return result;
+  });
+
+  app.post<{
+    Params: {
+      id: string;
+    };
+  }>("/admin/matches/:id/revoke-settlement", async (request) => {
+    const result = await revokeMatchSettlement(request.params.id);
+
+    await Promise.all(
+      result.notifications.map((notification) =>
+        notifyTelegramUser(
+          notification.telegramId,
+          ["Settlement revoked", notification.matchTitle, notification.selection, "Bet is pending again."].join("\n")
         )
       )
     );

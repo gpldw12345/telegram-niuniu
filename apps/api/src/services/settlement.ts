@@ -66,6 +66,7 @@ export async function settleMatchManually(matchId: string, homeScore: number, aw
           id: bet.id
         },
         data: {
+          previousStatus: bet.status,
           status: result.status,
           settlementNote: result.note,
           settledAt: new Date()
@@ -127,6 +128,118 @@ export async function settleMatchManually(matchId: string, homeScore: number, aw
       match,
       settledBets,
       creditedPoints: creditedPoints.toNumber(),
+      notifications
+    };
+  });
+}
+
+export async function revokeMatchSettlement(matchId: string) {
+  return prisma.$transaction(async (tx) => {
+    const match = await tx.match.findUniqueOrThrow({
+      where: {
+        id: matchId
+      }
+    });
+    const settledBets = await tx.bet.findMany({
+      where: {
+        matchId,
+        settledAt: {
+          not: null
+        },
+        status: {
+          not: "PENDING"
+        }
+      },
+      include: {
+        user: true
+      }
+    });
+
+    let revokedBets = 0;
+    const notifications: Array<{
+      telegramId: string;
+      matchTitle: string;
+      selection: string;
+    }> = [];
+
+    for (const bet of settledBets) {
+      const credits = await tx.walletTransaction.findMany({
+        where: {
+          referenceType: "Bet",
+          referenceId: bet.id,
+          source: "SETTLEMENT"
+        }
+      });
+      const totalCredit = credits.reduce((total, transaction) => total.add(transaction.amount), new Prisma.Decimal(0));
+
+      if (totalCredit.gt(0)) {
+        const updatedUser = await tx.telegramUser.update({
+          where: {
+            id: bet.userId
+          },
+          data: {
+            pointsBalance: {
+              decrement: totalCredit
+            }
+          }
+        });
+
+        await tx.walletTransaction.create({
+          data: {
+            userId: bet.userId,
+            amount: totalCredit.neg(),
+            balanceAfter: updatedUser.pointsBalance,
+            type: "ADMIN_ADJUSTMENT",
+            source: "ADMIN",
+            referenceType: "Bet",
+            referenceId: bet.id,
+            note: "Settlement revoked by admin"
+          }
+        });
+      }
+
+      await tx.bet.update({
+        where: {
+          id: bet.id
+        },
+        data: {
+          status: bet.previousStatus ?? "PENDING",
+          previousStatus: null,
+          settlementNote: null,
+          settledAt: null
+        }
+      });
+
+      revokedBets += 1;
+      notifications.push({
+        telegramId: bet.user.telegramId,
+        matchTitle: `${displayTeamName(match.homeTeam)} vs ${displayTeamName(match.awayTeam)}`,
+        selection: bet.selectionLabel
+      });
+    }
+
+    await tx.match.update({
+      where: {
+        id: matchId
+      },
+      data: {
+        homeScore: null,
+        awayScore: null,
+        status: "SCHEDULED"
+      }
+    });
+
+    await tx.betWindow.updateMany({
+      where: {
+        matchId
+      },
+      data: {
+        status: "OPEN"
+      }
+    });
+
+    return {
+      revokedBets,
       notifications
     };
   });

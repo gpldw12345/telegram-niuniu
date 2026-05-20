@@ -199,6 +199,7 @@ model Bet {
   stake            Decimal        @db.Decimal(18, 2)
   potentialPayout  Decimal        @db.Decimal(18, 2)
   status           BetStatus      @default(PENDING)
+  previousStatus   BetStatus?
   settlementNote   String?
   placedAt         DateTime       @default(now())
   settledAt        DateTime?
