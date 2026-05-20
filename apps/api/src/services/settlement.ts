@@ -36,6 +36,15 @@ export async function settleMatchManually(matchId: string, homeScore: number, aw
 
     let settledBets = 0;
     let creditedPoints = new Prisma.Decimal(0);
+    const notifications: Array<{
+      telegramId: string;
+      matchTitle: string;
+      selection: string;
+      stake: number;
+      status: BetStatus;
+      credit: number;
+      note: string;
+    }> = [];
 
     for (const bet of pendingBets) {
       const result = calculateBetSettlement({
@@ -90,6 +99,15 @@ export async function settleMatchManually(matchId: string, homeScore: number, aw
 
       creditedPoints = creditedPoints.add(result.credit);
       settledBets += 1;
+      notifications.push({
+        telegramId: bet.user.telegramId,
+        matchTitle: `${match.homeTeam} vs ${match.awayTeam}`,
+        selection: bet.selectionLabel,
+        stake: bet.stake.toNumber(),
+        status: result.status,
+        credit: result.credit.toNumber(),
+        note: result.note
+      });
     }
 
     await tx.betWindow.updateMany({
@@ -104,7 +122,8 @@ export async function settleMatchManually(matchId: string, homeScore: number, aw
     return {
       match,
       settledBets,
-      creditedPoints: creditedPoints.toNumber()
+      creditedPoints: creditedPoints.toNumber(),
+      notifications
     };
   });
 }

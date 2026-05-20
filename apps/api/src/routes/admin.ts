@@ -4,6 +4,7 @@ import { prisma } from "../config/db.js";
 import { calculateBetStats } from "../services/bets.js";
 import { syncConfiguredMatches } from "../services/matchSync.js";
 import { settleMatchManually } from "../services/settlement.js";
+import { formatSignedPoints, notifyTelegramUser } from "../services/telegramNotify.js";
 
 export async function registerAdminRoutes(app: FastifyInstance) {
   app.get("/admin/summary", async () => {
@@ -186,7 +187,25 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       });
     }
 
-    return settleMatchManually(request.params.id, homeScore, awayScore);
+    const result = await settleMatchManually(request.params.id, homeScore, awayScore);
+
+    await Promise.all(
+      result.notifications.map((notification) =>
+        notifyTelegramUser(
+          notification.telegramId,
+          [
+            "Bet settled",
+            notification.matchTitle,
+            notification.selection,
+            `Status: ${notification.status}`,
+            `Credit: ${formatSignedPoints(notification.credit)}`,
+            notification.note
+          ].join("\n")
+        )
+      )
+    );
+
+    return result;
   });
 
   app.post<{
@@ -231,6 +250,18 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       return user;
     });
 
+    await notifyTelegramUser(
+      result.telegramId,
+      [
+        "Points adjusted",
+        `Amount: ${formatSignedPoints(amount.toNumber())}`,
+        `Balance: ${result.pointsBalance.toFixed(0)} points`,
+        request.body.note ? `Note: ${request.body.note}` : ""
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
+
     return {
       id: result.id,
       pointsBalance: result.pointsBalance.toNumber()
@@ -245,6 +276,10 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     const bet = await prisma.bet.findUnique({
       where: {
         id: request.params.id
+      },
+      include: {
+        user: true,
+        match: true
       }
     });
 
@@ -256,7 +291,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       return reply.code(400).send({ message: "Only pending bets can be cancelled" });
     }
 
-    await prisma.$transaction(async (tx) => {
+    const refund = await prisma.$transaction(async (tx) => {
       const updatedUser = await tx.telegramUser.update({
         where: {
           id: bet.userId
@@ -291,7 +326,20 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           note: "Admin cancelled pending bet"
         }
       });
+
+      return updatedUser;
     });
+
+    await notifyTelegramUser(
+      bet.user.telegramId,
+      [
+        "Bet cancelled",
+        `${bet.match.homeTeam} vs ${bet.match.awayTeam}`,
+        bet.selectionLabel,
+        `Refund: ${formatSignedPoints(bet.stake.toNumber())}`,
+        `Balance: ${refund.pointsBalance.toFixed(0)} points`
+      ].join("\n")
+    );
 
     return { ok: true };
   });
