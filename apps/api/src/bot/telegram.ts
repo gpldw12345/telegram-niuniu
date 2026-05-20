@@ -19,7 +19,7 @@ import {
   isAwaitingStake
 } from "./betFlow.js";
 import { displayTeamName } from "./teamNames.js";
-import { getRecentBets, InsufficientPointsError, placeConfirmedBet } from "../services/bets.js";
+import { getUserBetHistory, InsufficientPointsError, placeConfirmedBet } from "../services/bets.js";
 import { getTelegramUserBalance } from "../services/users.js";
 
 export function createTelegramBot() {
@@ -141,7 +141,7 @@ export function createTelegramBot() {
   });
 
   bot.hears("My Bets", async (ctx) => {
-    const bets = await getRecentBets(ctx.from);
+    const { bets, stats } = await getUserBetHistory(ctx.from);
 
     if (bets.length === 0) {
       await ctx.reply("No bets yet.");
@@ -149,12 +149,7 @@ export function createTelegramBot() {
     }
 
     await ctx.reply(
-      bets
-        .map(
-          (bet, index) =>
-            `${index + 1}. ${displayTeamName(bet.match.homeTeam)} vs ${displayTeamName(bet.match.awayTeam)}\n${bet.selectionLabel}\nStake: ${bet.stake.toFixed(0)} | Status: ${bet.status}`
-        )
-        .join("\n\n")
+      [formatUserStats(stats), "", ...bets.map(formatBetHistoryLine)].join("\n\n")
     );
   });
 
@@ -296,21 +291,25 @@ export function createTelegramBot() {
   });
 
   bot.command("mybets", async (ctx) => {
-    const bets = await getRecentBets(ctx.from);
+    const { bets, stats } = await getUserBetHistory(ctx.from);
 
     if (bets.length === 0) {
       await ctx.reply("No bets yet.");
       return;
     }
 
-    await ctx.reply(
-      bets
-        .map(
-          (bet, index) =>
-            `${index + 1}. ${displayTeamName(bet.match.homeTeam)} vs ${displayTeamName(bet.match.awayTeam)}\n${bet.selectionLabel}\nStake: ${bet.stake.toFixed(0)} | Status: ${bet.status}`
-        )
-        .join("\n\n")
-    );
+    await ctx.reply([formatUserStats(stats), "", ...bets.map(formatBetHistoryLine)].join("\n\n"));
+  });
+
+  bot.command("history", async (ctx) => {
+    const { bets, stats } = await getUserBetHistory(ctx.from);
+
+    if (bets.length === 0) {
+      await ctx.reply("No bets yet.");
+      return;
+    }
+
+    await ctx.reply([formatUserStats(stats), "", ...bets.map(formatBetHistoryLine)].join("\n\n"));
   });
 
   bot.catch((error, ctx) => {
@@ -321,4 +320,35 @@ export function createTelegramBot() {
   });
 
   return bot;
+}
+
+function formatUserStats(stats: {
+  totalBets: number;
+  pending: number;
+  won: number;
+  lost: number;
+  pushed: number;
+  totalStake: number;
+  net: number;
+}) {
+  return [
+    "Bet History",
+    `W-L-P: ${formatStat(stats.won)}-${formatStat(stats.lost)}-${formatStat(stats.pushed)}`,
+    `Pending: ${stats.pending}`,
+    `Total stake: ${stats.totalStake.toFixed(0)}`,
+    `Net: ${stats.net >= 0 ? "+" : ""}${stats.net.toFixed(0)} points`
+  ].join("\n");
+}
+
+function formatBetHistoryLine(
+  bet: Awaited<ReturnType<typeof getUserBetHistory>>["bets"][number],
+  index: number
+) {
+  return `${index + 1}. ${displayTeamName(bet.match.homeTeam)} vs ${displayTeamName(bet.match.awayTeam)}
+${bet.selectionLabel}
+Stake: ${bet.stake.toFixed(0)} | Status: ${bet.status}`;
+}
+
+function formatStat(value: number) {
+  return Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1);
 }

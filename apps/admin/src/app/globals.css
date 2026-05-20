@@ -256,6 +256,49 @@ nav a:hover {
   font-size: 16px;
 }
 
+.user-list {
+  display: grid;
+}
+
+.user-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 18px;
+}
+
+.user-row:last-child {
+  border-bottom: 0;
+}
+
+.user-row div {
+  display: grid;
+  gap: 5px;
+}
+
+.user-row div:last-child {
+  text-align: right;
+}
+
+.user-row strong {
+  font-size: 15px;
+}
+
+.user-row span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.user-row .net-positive {
+  color: var(--accent-strong);
+}
+
+.user-row .net-negative {
+  color: #b42318;
+}
+
 .table-wrap {
   overflow-x: auto;
 }

@@ -12,6 +12,15 @@ type AdminSummary = {
     username: string | null;
     displayName: string;
     pointsBalance: number;
+    stats: {
+      totalBets: number;
+      pending: number;
+      won: number;
+      lost: number;
+      pushed: number;
+      totalStake: number;
+      net: number;
+    };
   }>;
   bets: Array<{
     id: string;
@@ -209,14 +218,22 @@ export default async function AdminHome() {
             {data.users.length === 0 ? (
               <div className="empty-state">No users yet.</div>
             ) : (
-              <ul className="list">
+              <div className="user-list">
                 {data.users.map((user) => (
-                  <li key={user.id}>
-                    <span>{user.displayName}</span>
-                    <strong>{formatPoints(user.pointsBalance)}</strong>
-                  </li>
+                  <div className="user-row" key={user.id}>
+                    <div>
+                      <strong>{user.displayName}</strong>
+                      <span>W-L-P {formatStat(user.stats.won)}-{formatStat(user.stats.lost)}-{formatStat(user.stats.pushed)}</span>
+                    </div>
+                    <div>
+                      <strong>{formatPoints(user.pointsBalance)}</strong>
+                      <span className={user.stats.net >= 0 ? "net-positive" : "net-negative"}>
+                        {user.stats.net >= 0 ? "+" : ""}{formatPoints(user.stats.net)}
+                      </span>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         </section>
@@ -263,6 +280,10 @@ export default async function AdminHome() {
 
 function formatPoints(value: number) {
   return Math.round(value).toLocaleString();
+}
+
+function formatStat(value: number) {
+  return Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1);
 }
 
 function formatDate(value: string) {

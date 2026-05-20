@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../config/db.js";
+import { calculateBetStats } from "../services/bets.js";
 import { syncConfiguredMatches } from "../services/matchSync.js";
 import { settleMatchManually } from "../services/settlement.js";
 
@@ -20,6 +21,9 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           }
         }),
         prisma.telegramUser.findMany({
+          include: {
+            bets: true
+          },
           orderBy: {
             pointsBalance: "desc"
           },
@@ -72,6 +76,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         username: user.username,
         displayName: user.displayName || user.username || user.telegramId,
         pointsBalance: user.pointsBalance.toNumber(),
+        stats: calculateBetStats(user.bets),
         createdAt: user.createdAt.toISOString()
       })),
       bets: bets.map((bet) => ({
