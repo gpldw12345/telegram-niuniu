@@ -30,6 +30,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
   app.get("/admin/summary", async () => {
     const now = new Date();
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
     const fiveDaysLater = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
     const reportPeriodStart = await getReportPeriodStart();
     const periodBetWhere = reportPeriodStart
@@ -85,10 +86,34 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         }),
         prisma.match.findMany({
           where: {
-            commenceTime: {
-              gte: now,
-              lte: fiveDaysLater
-            }
+            OR: [
+              {
+                commenceTime: {
+                  gte: now,
+                  lte: fiveDaysLater
+                }
+              },
+              {
+                commenceTime: {
+                  gte: threeDaysAgo,
+                  lt: now
+                },
+                status: {
+                  not: "FINISHED"
+                }
+              },
+              {
+                commenceTime: {
+                  gte: threeDaysAgo,
+                  lt: now
+                },
+                bets: {
+                  some: {
+                    status: "PENDING"
+                  }
+                }
+              }
+            ]
           },
           include: {
             bets: {
