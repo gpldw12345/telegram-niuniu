@@ -107,6 +107,13 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                   gte: threeDaysAgo,
                   lt: now
                 },
+                status: "FINISHED"
+              },
+              {
+                commenceTime: {
+                  gte: threeDaysAgo,
+                  lt: now
+                },
                 bets: {
                   some: {
                     status: "PENDING"
