@@ -40,6 +40,7 @@ export async function settleMatchManually(matchId: string, homeScore: number, aw
     const notifications: Array<{
       telegramId: string;
       matchTitle: string;
+      resultScore: string;
       selection: string;
       stake: number;
       status: BetStatus;
@@ -107,6 +108,7 @@ export async function settleMatchManually(matchId: string, homeScore: number, aw
       notifications.push({
         telegramId: bet.user.telegramId,
         matchTitle: `${displayTeamName(match.homeTeam)} vs ${displayTeamName(match.awayTeam)}`,
+        resultScore: `${homeScore}-${awayScore}`,
         selection: bet.selectionLabel,
         stake: bet.stake.toNumber(),
         status: result.status,

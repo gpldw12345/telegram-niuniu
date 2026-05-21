@@ -316,6 +316,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           [
             "Bet settled",
             notification.matchTitle,
+            `Result: ${notification.resultScore}`,
             notification.selection,
             `Status: ${notification.status}`,
             `Credit: ${formatSignedPoints(notification.credit)}`,
