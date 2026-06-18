@@ -7,8 +7,7 @@ import type { OddsApiEvent } from "./oddsApi.js";
 
 export async function postEnabledMatchesToGroup(
   bot: Telegraf,
-  events: OddsApiEvent[],
-  options: { onlyUnposted?: boolean } = {}
+  events: OddsApiEvent[]
 ) {
   if (!env.TELEGRAM_GROUP_CHAT_ID) {
     return {
@@ -24,15 +23,6 @@ export async function postEnabledMatchesToGroup(
   let skipped = 0;
 
   for (const match of enabledMatches) {
-    if (
-      options.onlyUnposted &&
-      match.preMatchMessageId &&
-      match.groupChatId === String(env.TELEGRAM_GROUP_CHAT_ID)
-    ) {
-      skipped += 1;
-      continue;
-    }
-
     const event = eventById.get(match.oddsApiEventId);
 
     if (!event) {

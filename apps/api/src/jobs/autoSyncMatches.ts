@@ -28,7 +28,7 @@ export function startAutoMatchSync(log: FastifyBaseLogger, bot?: Telegraf) {
       const autoPostEnabled = await isAutoMatchPostEnabled();
 
       if (autoPostEnabled && bot) {
-        const postResult = await postEnabledMatchesToGroup(bot, result.events, { onlyUnposted: true });
+        const postResult = await postEnabledMatchesToGroup(bot, result.events);
         log.info(
           {
             posted: postResult.posted,

@@ -33,16 +33,16 @@ export function createTelegramBot() {
   }
 
   const bot = new Telegraf(env.TELEGRAM_BOT_TOKEN);
-  const syncAndPostEnabledMatches = async (ctx: Context, options: { onlyUnposted?: boolean } = {}) => {
+  const syncAndPostEnabledMatches = async (ctx: Context) => {
     const { errors, events, provider } = await syncConfiguredMatches();
-    const postResult = await postEnabledMatchesToGroup(bot, events, options);
+    const postResult = await postEnabledMatchesToGroup(bot, events);
 
     if (postResult.posted === 0) {
       await ctx.reply(
         [
-          `No admin-ticked unposted matches found from ${provider}.`,
+          `No admin-ticked matches available to post from ${provider}.`,
           postResult.reason,
-          postResult.skipped > 0 ? `Skipped ${postResult.skipped} already-posted or unavailable matches.` : "",
+          postResult.skipped > 0 ? `Skipped ${postResult.skipped} finished or unavailable matches.` : "",
           errors.length > 0 ? `Sync warnings: ${errors.join(" | ")}` : ""
         ]
           .filter(Boolean)
@@ -157,7 +157,7 @@ export function createTelegramBot() {
 
     await setAutoMatchPostEnabled(true);
     await ctx.reply("Auto post is ON. I will try one sync and post now.");
-    await syncAndPostEnabledMatches(ctx, { onlyUnposted: true });
+    await syncAndPostEnabledMatches(ctx);
   });
 
   bot.command("autopost_off", async (ctx) => {
@@ -184,7 +184,7 @@ export function createTelegramBot() {
     }
 
     await ctx.reply("Syncing and checking admin-ticked matches now...");
-    await syncAndPostEnabledMatches(ctx, { onlyUnposted: true });
+    await syncAndPostEnabledMatches(ctx);
   });
 
   bot.command("postmatches", async (ctx) => {
