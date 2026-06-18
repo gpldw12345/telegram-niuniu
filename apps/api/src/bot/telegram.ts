@@ -3,6 +3,7 @@ import { env } from "../config/env.js";
 import { formatOddsApiGroupMatchPost } from "./messages.js";
 import { getPostEnabledMatches, syncConfiguredMatches } from "../services/matchSync.js";
 import { getConfiguredOddsForSports, getConfiguredSportKeys } from "../services/oddsProvider.js";
+import { isAutoMatchSyncEnabled, setAutoMatchSyncEnabled } from "../services/autoSyncSettings.js";
 import {
   beginBet,
   cancelPendingBet,
@@ -76,6 +77,8 @@ export function createTelegramBot() {
   });
 
   bot.command("status", async (ctx) => {
+    const autoSyncEnabled = await isAutoMatchSyncEnabled();
+
     await ctx.reply(
       [
         "World Cup Niuniu status",
@@ -83,9 +86,37 @@ export function createTelegramBot() {
         `Odds provider: ${env.ODDS_PROVIDER}`,
         `Sports: ${getConfiguredSportKeys().join(", ")}`,
         `Bookmaker: ${env.ODDS_API_BOOKMAKERS || "region default"}`,
+        `Auto sync: ${autoSyncEnabled ? "ON" : "OFF"} / every ${env.AUTO_SYNC_MATCHES_INTERVAL_MINUTES} mins`,
         "Betting flow: 1X2 and Asian Handicap test mode"
       ].join("\n")
     );
+  });
+
+  bot.command("autosync_on", async (ctx) => {
+    if (!(await canManageAutoSync(ctx))) {
+      return;
+    }
+
+    await setAutoMatchSyncEnabled(true);
+    await ctx.reply(`Auto sync is ON. Matches will sync every ${env.AUTO_SYNC_MATCHES_INTERVAL_MINUTES} minutes.`);
+  });
+
+  bot.command("autosync_off", async (ctx) => {
+    if (!(await canManageAutoSync(ctx))) {
+      return;
+    }
+
+    await setAutoMatchSyncEnabled(false);
+    await ctx.reply("Auto sync is OFF. You can still sync manually from admin or /postmatches.");
+  });
+
+  bot.command("autosync_status", async (ctx) => {
+    if (!(await canManageAutoSync(ctx))) {
+      return;
+    }
+
+    const enabled = await isAutoMatchSyncEnabled();
+    await ctx.reply(`Auto sync: ${enabled ? "ON" : "OFF"}\nInterval: ${env.AUTO_SYNC_MATCHES_INTERVAL_MINUTES} minutes`);
   });
 
   bot.command("postmatches", async (ctx) => {
@@ -477,6 +508,37 @@ function formatKickoff(value: Date) {
 
 function formatBetStatus(status: string) {
   return status.replace(/_/g, " ");
+}
+
+async function canManageAutoSync(ctx: Context) {
+  if (!env.TELEGRAM_GROUP_CHAT_ID) {
+    await ctx.reply("TELEGRAM_GROUP_CHAT_ID is not set.");
+    return false;
+  }
+
+  if (String(ctx.chat?.id) !== env.TELEGRAM_GROUP_CHAT_ID) {
+    await ctx.reply("Please run this command in the configured admin/group chat.");
+    return false;
+  }
+
+  if (!ctx.from) {
+    await ctx.reply("I could not read your Telegram user.");
+    return false;
+  }
+
+  try {
+    const member = await ctx.getChatMember(ctx.from.id);
+
+    if (member.status === "creator" || member.status === "administrator") {
+      return true;
+    }
+  } catch {
+    await ctx.reply("I could not verify your group admin status.");
+    return false;
+  }
+
+  await ctx.reply("Only group admins can change auto sync.");
+  return false;
 }
 
 function correctScoreKeyboardRows(selections: Awaited<ReturnType<typeof getCorrectScoreSelections>>) {
