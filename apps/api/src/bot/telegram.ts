@@ -33,6 +33,34 @@ export function createTelegramBot() {
   }
 
   const bot = new Telegraf(env.TELEGRAM_BOT_TOKEN);
+  const syncAndPostEnabledMatches = async (ctx: Context, options: { onlyUnposted?: boolean } = {}) => {
+    const { errors, events, provider } = await syncConfiguredMatches();
+    const postResult = await postEnabledMatchesToGroup(bot, events, options);
+
+    if (postResult.posted === 0) {
+      await ctx.reply(
+        [
+          `No admin-ticked unposted matches found from ${provider}.`,
+          postResult.reason,
+          postResult.skipped > 0 ? `Skipped ${postResult.skipped} already-posted or unavailable matches.` : "",
+          errors.length > 0 ? `Sync warnings: ${errors.join(" | ")}` : ""
+        ]
+          .filter(Boolean)
+          .join("\n")
+      );
+      return;
+    }
+
+    await ctx.reply(
+      [
+        `Posted ${postResult.posted} admin-ticked matches to the group.`,
+        postResult.skipped > 0 ? `Skipped ${postResult.skipped} matches.` : "",
+        errors.length > 0 ? `Sync warnings: ${errors.join(" | ")}` : ""
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
+  };
 
   bot.start(async (ctx) => {
     const payload = ctx.payload;
@@ -128,7 +156,8 @@ export function createTelegramBot() {
     }
 
     await setAutoMatchPostEnabled(true);
-    await ctx.reply("Auto post is ON. After each auto sync, admin-ticked unposted matches will be posted to the group.");
+    await ctx.reply("Auto post is ON. I will try one sync and post now.");
+    await syncAndPostEnabledMatches(ctx, { onlyUnposted: true });
   });
 
   bot.command("autopost_off", async (ctx) => {
@@ -147,6 +176,15 @@ export function createTelegramBot() {
 
     const enabled = await isAutoMatchPostEnabled();
     await ctx.reply(`Auto post: ${enabled ? "ON" : "OFF"}`);
+  });
+
+  bot.command("autopost_now", async (ctx) => {
+    if (!(await canManageAutoSync(ctx))) {
+      return;
+    }
+
+    await ctx.reply("Syncing and checking admin-ticked matches now...");
+    await syncAndPostEnabledMatches(ctx, { onlyUnposted: true });
   });
 
   bot.command("postmatches", async (ctx) => {

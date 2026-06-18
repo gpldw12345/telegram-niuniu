@@ -24,7 +24,11 @@ export async function postEnabledMatchesToGroup(
   let skipped = 0;
 
   for (const match of enabledMatches) {
-    if (options.onlyUnposted && match.preMatchMessageId) {
+    if (
+      options.onlyUnposted &&
+      match.preMatchMessageId &&
+      match.groupChatId === String(env.TELEGRAM_GROUP_CHAT_ID)
+    ) {
       skipped += 1;
       continue;
     }
