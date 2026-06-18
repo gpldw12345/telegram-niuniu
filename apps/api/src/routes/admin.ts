@@ -6,7 +6,7 @@ import { getCorrectScoreAdmin, saveCorrectScoreOdds } from "../services/correctS
 import { csvResponse } from "../services/csv.js";
 import { syncConfiguredMatches } from "../services/matchSync.js";
 import { revokeMatchSettlement, settleMatchManually } from "../services/settlement.js";
-import { formatSignedPoints, notifyBetLogGroup, notifyTelegramUser } from "../services/telegramNotify.js";
+import { formatSignedPoints, notifyBetLogGroup, notifyMatchGroup, notifyTelegramUser } from "../services/telegramNotify.js";
 import { displayTeamName } from "../bot/teamNames.js";
 import { getReportPeriodStart, revokeReportPeriodStart, setReportPeriodStart } from "../services/reportPeriod.js";
 
@@ -325,6 +325,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         )
       )
     );
+    await notifyMatchGroup(formatSettlementGroupMessage(result.match, homeScore, awayScore));
 
     return result;
   });
@@ -665,4 +666,32 @@ async function buildExport(type: string) {
 
 function formatMatchName(homeTeam: string, awayTeam: string) {
   return `${displayTeamName(homeTeam)} vs ${displayTeamName(awayTeam)}`;
+}
+
+function formatSettlementGroupMessage(
+  match: { homeTeam: string; awayTeam: string },
+  homeScore: number,
+  awayScore: number
+) {
+  return [
+    "✅ Match Settled",
+    "",
+    `${displayTeamName(match.homeTeam)} ${homeScore} - ${awayScore} ${displayTeamName(match.awayTeam)}`,
+    "",
+    "Result summary",
+    `1X2: ${formatOneXTwoResult(match, homeScore, awayScore)}`,
+    `Correct Score: ${homeScore}-${awayScore}`
+  ].join("\n");
+}
+
+function formatOneXTwoResult(match: { homeTeam: string; awayTeam: string }, homeScore: number, awayScore: number) {
+  if (homeScore > awayScore) {
+    return `${displayTeamName(match.homeTeam)} win`;
+  }
+
+  if (awayScore > homeScore) {
+    return `${displayTeamName(match.awayTeam)} win`;
+  }
+
+  return "Draw";
 }

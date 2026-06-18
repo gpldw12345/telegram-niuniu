@@ -27,6 +27,18 @@ export async function notifyBetLogGroup(message: string) {
   }
 }
 
+export async function notifyMatchGroup(message: string) {
+  if (!bot || !env.TELEGRAM_GROUP_CHAT_ID) {
+    return;
+  }
+
+  try {
+    await bot.telegram.sendMessage(env.TELEGRAM_GROUP_CHAT_ID, message);
+  } catch {
+    // Group may not be configured or bot may not have access.
+  }
+}
+
 export function formatSignedPoints(amount: number) {
   const prefix = amount >= 0 ? "+RM" : "-RM";
   return `${prefix}${Math.round(Math.abs(amount))}`;
