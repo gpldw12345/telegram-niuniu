@@ -24,6 +24,7 @@ const envSchema = z.object({
   ODDS_API_BOOKMAKERS: z.string().optional(),
   AUTO_SYNC_MATCHES_ENABLED: z.coerce.boolean().default(true),
   AUTO_SYNC_MATCHES_INTERVAL_MINUTES: z.coerce.number().int().positive().default(30),
+  AUTO_POST_MATCHES_ENABLED: z.coerce.boolean().default(false),
   ADMIN_JWT_SECRET: z.string().min(24).optional(),
   ADMIN_SITE_URL: z.string().url().default("http://localhost:3000"),
   API_BASE_URL: z.string().url().default("http://localhost:4000")

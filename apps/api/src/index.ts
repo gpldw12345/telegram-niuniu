@@ -10,7 +10,7 @@ async function main() {
 
   await app.listen({ port: env.PORT, host: "0.0.0.0" });
   app.log.info({ port: env.PORT }, "API server started");
-  const autoSyncTimer = startAutoMatchSync(app.log);
+  const autoSyncTimer = startAutoMatchSync(app.log, bot ?? undefined);
 
   if (bot) {
     if (isProduction) {

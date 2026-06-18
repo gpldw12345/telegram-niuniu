@@ -1,9 +1,12 @@
 import type { FastifyBaseLogger } from "fastify";
+import type { Telegraf } from "telegraf";
 import { env } from "../config/env.js";
 import { isAutoMatchSyncEnabled } from "../services/autoSyncSettings.js";
+import { isAutoMatchPostEnabled } from "../services/autoPostSettings.js";
+import { postEnabledMatchesToGroup } from "../services/groupPosting.js";
 import { syncConfiguredMatches } from "../services/matchSync.js";
 
-export function startAutoMatchSync(log: FastifyBaseLogger) {
+export function startAutoMatchSync(log: FastifyBaseLogger, bot?: Telegraf) {
   let isSyncing = false;
   const intervalMs = env.AUTO_SYNC_MATCHES_INTERVAL_MINUTES * 60 * 1000;
 
@@ -22,6 +25,20 @@ export function startAutoMatchSync(log: FastifyBaseLogger) {
 
     try {
       const result = await syncConfiguredMatches();
+      const autoPostEnabled = await isAutoMatchPostEnabled();
+
+      if (autoPostEnabled && bot) {
+        const postResult = await postEnabledMatchesToGroup(bot, result.events, { onlyUnposted: true });
+        log.info(
+          {
+            posted: postResult.posted,
+            skipped: postResult.skipped,
+            reason: postResult.reason
+          },
+          "Auto match post completed"
+        );
+      }
+
       log.info(
         {
           provider: result.provider,

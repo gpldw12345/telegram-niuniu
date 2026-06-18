@@ -1,9 +1,10 @@
 import { Markup, Telegraf, type Context } from "telegraf";
 import { env } from "../config/env.js";
-import { formatOddsApiGroupMatchPost } from "./messages.js";
-import { getPostEnabledMatches, syncConfiguredMatches } from "../services/matchSync.js";
+import { syncConfiguredMatches } from "../services/matchSync.js";
 import { getConfiguredOddsForSports, getConfiguredSportKeys } from "../services/oddsProvider.js";
 import { isAutoMatchSyncEnabled, setAutoMatchSyncEnabled } from "../services/autoSyncSettings.js";
+import { isAutoMatchPostEnabled, setAutoMatchPostEnabled } from "../services/autoPostSettings.js";
+import { postEnabledMatchesToGroup } from "../services/groupPosting.js";
 import {
   beginBet,
   cancelPendingBet,
@@ -78,6 +79,7 @@ export function createTelegramBot() {
 
   bot.command("status", async (ctx) => {
     const autoSyncEnabled = await isAutoMatchSyncEnabled();
+    const autoPostEnabled = await isAutoMatchPostEnabled();
 
     await ctx.reply(
       [
@@ -87,6 +89,7 @@ export function createTelegramBot() {
         `Sports: ${getConfiguredSportKeys().join(", ")}`,
         `Bookmaker: ${env.ODDS_API_BOOKMAKERS || "region default"}`,
         `Auto sync: ${autoSyncEnabled ? "ON" : "OFF"} / every ${env.AUTO_SYNC_MATCHES_INTERVAL_MINUTES} mins`,
+        `Auto post: ${autoPostEnabled ? "ON" : "OFF"}`,
         "Betting flow: 1X2 and Asian Handicap test mode"
       ].join("\n")
     );
@@ -119,6 +122,33 @@ export function createTelegramBot() {
     await ctx.reply(`Auto sync: ${enabled ? "ON" : "OFF"}\nInterval: ${env.AUTO_SYNC_MATCHES_INTERVAL_MINUTES} minutes`);
   });
 
+  bot.command("autopost_on", async (ctx) => {
+    if (!(await canManageAutoSync(ctx))) {
+      return;
+    }
+
+    await setAutoMatchPostEnabled(true);
+    await ctx.reply("Auto post is ON. After each auto sync, admin-ticked unposted matches will be posted to the group.");
+  });
+
+  bot.command("autopost_off", async (ctx) => {
+    if (!(await canManageAutoSync(ctx))) {
+      return;
+    }
+
+    await setAutoMatchPostEnabled(false);
+    await ctx.reply("Auto post is OFF. Auto sync can still update admin odds.");
+  });
+
+  bot.command("autopost_status", async (ctx) => {
+    if (!(await canManageAutoSync(ctx))) {
+      return;
+    }
+
+    const enabled = await isAutoMatchPostEnabled();
+    await ctx.reply(`Auto post: ${enabled ? "ON" : "OFF"}`);
+  });
+
   bot.command("postmatches", async (ctx) => {
     if (!env.TELEGRAM_GROUP_CHAT_ID) {
       await ctx.reply("TELEGRAM_GROUP_CHAT_ID is not set yet.");
@@ -128,17 +158,13 @@ export function createTelegramBot() {
     await ctx.reply("Syncing upcoming odds...");
 
     const { errors, events, provider } = await syncConfiguredMatches();
-    const eventById = new Map(events.map((event) => [event.id, event]));
-    const enabledMatches = await getPostEnabledMatches();
-    const upcomingEvents = enabledMatches.flatMap((match) => {
-      const event = eventById.get(match.oddsApiEventId);
-      return event ? [event] : [];
-    });
+    const postResult = await postEnabledMatchesToGroup(bot, events);
 
-    if (upcomingEvents.length === 0) {
+    if (postResult.posted === 0) {
       await ctx.reply(
         [
           `No admin-selected matches found from ${provider}.`,
+          postResult.reason,
           "Open the admin dashboard, sync matches, then enable the matches you want to post.",
           errors.length > 0 ? `Sync warnings: ${errors.join(" | ")}` : ""
         ]
@@ -148,20 +174,10 @@ export function createTelegramBot() {
       return;
     }
 
-    for (const event of upcomingEvents) {
-      await ctx.telegram.sendMessage(env.TELEGRAM_GROUP_CHAT_ID, formatOddsApiGroupMatchPost(event), {
-        reply_markup: Markup.inlineKeyboard([
-          Markup.button.url(
-            "Place Bet",
-            `https://t.me/${env.TELEGRAM_BOT_USERNAME}?start=bet_${event.id}`
-          )
-        ]).reply_markup
-      });
-    }
-
     await ctx.reply(
       [
-        `Posted ${upcomingEvents.length} admin-selected matches to the group.`,
+        `Posted ${postResult.posted} admin-selected matches to the group.`,
+        postResult.skipped > 0 ? `Skipped ${postResult.skipped} matches.` : "",
         errors.length > 0 ? `Sync warnings: ${errors.join(" | ")}` : ""
       ]
         .filter(Boolean)
