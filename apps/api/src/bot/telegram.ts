@@ -22,7 +22,13 @@ import {
 } from "./betFlow.js";
 import { displayTeamName } from "./teamNames.js";
 import { correctScoreRows, getCorrectScoreSelections } from "../services/correctScore.js";
-import { type BetHistoryFilter, getUserBetHistory, InsufficientPointsError, placeConfirmedBet } from "../services/bets.js";
+import {
+  BettingClosedError,
+  type BetHistoryFilter,
+  getUserBetHistory,
+  InsufficientPointsError,
+  placeConfirmedBet
+} from "../services/bets.js";
 import { getTelegramUserBalance, getTelegramUserBetLimits } from "../services/users.js";
 
 const MIN_BET_AMOUNT = 15;
@@ -72,6 +78,11 @@ export function createTelegramBot() {
 
       if (!event) {
         await ctx.reply("This match is no longer available. Please use the latest group message.");
+        return;
+      }
+
+      if (isAfterKickoff(event.commence_time)) {
+        await ctx.reply("Betting closed. This match has already started.");
         return;
       }
 
@@ -254,6 +265,12 @@ export function createTelegramBot() {
       return;
     }
 
+    if (isAfterKickoff(pending.event.commence_time)) {
+      cancelPendingBet(ctx.from.id);
+      await ctx.reply("Betting closed. This match has already started.");
+      return;
+    }
+
     if (market === "cs") {
       if (pending.event.sport_key.startsWith("basketball_")) {
         await ctx.reply("Correct Score is only available for soccer.");
@@ -301,6 +318,12 @@ export function createTelegramBot() {
       return;
     }
 
+    if (isAfterKickoff(pending.event.commence_time)) {
+      cancelPendingBet(ctx.from.id);
+      await ctx.reply("Betting closed. This match has already started.");
+      return;
+    }
+
     const selections =
       market === "cs"
         ? await getCorrectScoreSelections(pending.event.id)
@@ -338,6 +361,19 @@ export function createTelegramBot() {
   bot.on("text", async (ctx, next) => {
     if (!isAwaitingStake(ctx.from.id)) {
       await next();
+      return;
+    }
+
+    const currentPending = getPendingBet(ctx.from.id);
+
+    if (!currentPending) {
+      await ctx.reply("Please choose a selection first.");
+      return;
+    }
+
+    if (isAfterKickoff(currentPending.event.commence_time)) {
+      cancelPendingBet(ctx.from.id);
+      await ctx.reply("Betting closed. This match has already started.");
       return;
     }
 
@@ -419,6 +455,11 @@ export function createTelegramBot() {
     } catch (error) {
       if (error instanceof InsufficientPointsError) {
         await ctx.reply("Not enough balance for this bet. Please choose a smaller amount.");
+        return;
+      }
+
+      if (error instanceof BettingClosedError) {
+        await ctx.reply("Betting closed. This match has already started.");
         return;
       }
 
@@ -562,6 +603,10 @@ function formatKickoff(value: Date) {
 
 function formatBetStatus(status: string) {
   return status.replace(/_/g, " ");
+}
+
+function isAfterKickoff(commenceTime: string) {
+  return Date.now() >= new Date(commenceTime).getTime();
 }
 
 async function canManageAutoSync(ctx: Context) {

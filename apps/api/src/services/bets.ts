@@ -10,6 +10,12 @@ export class InsufficientPointsError extends Error {
   }
 }
 
+export class BettingClosedError extends Error {
+  constructor() {
+    super("Betting closed");
+  }
+}
+
 export async function placeConfirmedBet(from: User, confirmed: ConfirmedBet) {
   return prisma.$transaction(async (tx) => {
     const user = await ensureTelegramUser(from);
@@ -22,6 +28,11 @@ export async function placeConfirmedBet(from: User, confirmed: ConfirmedBet) {
     const stake = new Prisma.Decimal(confirmed.stake);
     const odds = new Prisma.Decimal(confirmed.selection.odds);
     const potentialPayout = stake.mul(odds);
+    const commenceTime = new Date(confirmed.event.commence_time);
+
+    if (Date.now() >= commenceTime.getTime()) {
+      throw new BettingClosedError();
+    }
 
     if (freshUser.pointsBalance.lt(stake)) {
       throw new InsufficientPointsError();
@@ -36,13 +47,13 @@ export async function placeConfirmedBet(from: User, confirmed: ConfirmedBet) {
         sportKey: confirmed.event.sport_key,
         homeTeam: confirmed.event.home_team,
         awayTeam: confirmed.event.away_team,
-        commenceTime: new Date(confirmed.event.commence_time)
+        commenceTime
       },
       update: {
         sportKey: confirmed.event.sport_key,
         homeTeam: confirmed.event.home_team,
         awayTeam: confirmed.event.away_team,
-        commenceTime: new Date(confirmed.event.commence_time)
+        commenceTime
       }
     });
 
@@ -57,11 +68,11 @@ export async function placeConfirmedBet(from: User, confirmed: ConfirmedBet) {
         matchId: match.id,
         type: "PRE_MATCH",
         status: "OPEN",
-        closesAt: new Date(confirmed.event.commence_time)
+        closesAt: commenceTime
       },
       update: {
         status: "OPEN",
-        closesAt: new Date(confirmed.event.commence_time)
+        closesAt: commenceTime
       }
     });
 
