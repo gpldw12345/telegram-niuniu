@@ -82,7 +82,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           orderBy: {
             placedAt: "desc"
           },
-          take: 10
+          take: 200
         }),
         prisma.match.findMany({
           where: {
