@@ -1,6 +1,7 @@
 import { createTelegramBot } from "./bot/telegram.js";
 import { env, isProduction } from "./config/env.js";
 import { prisma } from "./config/db.js";
+import { startAutoMatchSync } from "./jobs/autoSyncMatches.js";
 import { createServer } from "./server.js";
 
 async function main() {
@@ -9,6 +10,7 @@ async function main() {
 
   await app.listen({ port: env.PORT, host: "0.0.0.0" });
   app.log.info({ port: env.PORT }, "API server started");
+  const autoSyncTimer = startAutoMatchSync(app.log);
 
   if (bot) {
     if (isProduction) {
@@ -25,6 +27,9 @@ async function main() {
 
   const shutdown = async () => {
     app.log.info("Shutting down");
+    if (autoSyncTimer) {
+      clearInterval(autoSyncTimer);
+    }
     if (bot && !isProduction) {
       bot.stop("SIGTERM");
     }
