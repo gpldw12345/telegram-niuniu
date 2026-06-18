@@ -517,7 +517,7 @@ async function sendBetHistory(ctx: Context, filter: BetHistoryFilter) {
 
   const summary =
     filter === "settled"
-      ? formatUserStats(stats)
+      ? formatSettledBetSummary(bets.length, bets.reduce((total, bet) => total + bet.stake.toNumber(), 0))
       : formatOpenBetSummary(filter, bets.length, bets.reduce((total, bet) => total + bet.stake.toNumber(), 0));
 
   await ctx.reply([title, summary, "", ...bets.map(formatBetHistoryLine)].join("\n\n"));
@@ -572,6 +572,12 @@ function formatOpenBetSummary(filter: BetHistoryFilter, count: number, totalBet:
   const gameWord = count === 1 ? "game" : "games";
 
   return `You have ${count} ${label} ${gameWord} with total bet ${formatMoney(totalBet)}.`;
+}
+
+function formatSettledBetSummary(count: number, totalBet: number) {
+  const betWord = count === 1 ? "bet" : "bets";
+
+  return `This settlement period has ${count} settled ${betWord} with total bet ${formatMoney(totalBet)}.`;
 }
 
 function formatBetHistoryLine(

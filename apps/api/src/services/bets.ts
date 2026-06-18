@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import type { User } from "telegraf/types";
 import type { ConfirmedBet } from "../bot/betFlow.js";
 import { prisma } from "../config/db.js";
+import { getReportPeriodStart } from "./reportPeriod.js";
 import { ensureTelegramUser } from "./users.js";
 
 export class InsufficientPointsError extends Error {
@@ -158,7 +159,14 @@ export type BetHistoryFilter = "all" | "running" | "upcoming" | "settled";
 export async function getUserBetHistory(from: User, filter: BetHistoryFilter = "all") {
   const user = await ensureTelegramUser(from);
   const now = new Date();
+  const reportPeriodStart = await getReportPeriodStart();
   const where: Prisma.BetWhereInput = { userId: user.id };
+
+  if (reportPeriodStart) {
+    where.placedAt = {
+      gte: reportPeriodStart
+    };
+  }
 
   if (filter === "running") {
     where.status = "PENDING";
@@ -205,7 +213,14 @@ export async function getUserBetHistory(from: User, filter: BetHistoryFilter = "
   });
   const allBets = await prisma.bet.findMany({
     where: {
-      userId: user.id
+      userId: user.id,
+      ...(reportPeriodStart
+        ? {
+            placedAt: {
+              gte: reportPeriodStart
+            }
+          }
+        : {})
     }
   });
 
